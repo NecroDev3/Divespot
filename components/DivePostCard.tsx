@@ -91,7 +91,7 @@ export const DivePostCard: React.FC<DivePostCardProps> = ({
           <IconSymbol 
             name={isLiked ? "heart.fill" : "heart"} 
             size={24} 
-            color={isLiked ? '#ff4757' : Colors[colorScheme ?? 'light'].text} 
+            color={isLiked ? Colors[colorScheme ?? 'light'].likeActive : Colors[colorScheme ?? 'light'].like} 
           />
           <ThemedText style={styles.actionText}>
             {post.likes.length > 0 && `${post.likes.length} `}Like
@@ -102,7 +102,7 @@ export const DivePostCard: React.FC<DivePostCardProps> = ({
           <IconSymbol 
             name="bubble.left" 
             size={24} 
-            color={Colors[colorScheme ?? 'light'].text} 
+            color={Colors[colorScheme ?? 'light'].comment} 
           />
           <ThemedText style={styles.actionText}>
             {post.comments.length > 0 && `${post.comments.length} `}Comment
@@ -113,7 +113,7 @@ export const DivePostCard: React.FC<DivePostCardProps> = ({
           <IconSymbol 
             name="square.and.arrow.up" 
             size={24} 
-            color={Colors[colorScheme ?? 'light'].text} 
+            color={Colors[colorScheme ?? 'light'].share} 
           />
           <ThemedText style={styles.actionText}>Share</ThemedText>
         </TouchableOpacity>

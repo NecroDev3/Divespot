@@ -23,28 +23,43 @@ export const DiveStatsCard: React.FC<DiveStatsCardProps> = ({ diveDetails, style
     return { color: colors.warning, condition: 'Deep' };
   };
 
-  const getVisibilityCondition = (visibility: number) => {
-    if (visibility > 30) return { color: colors.success, condition: 'Excellent' };
-    if (visibility > 15) return { color: colors.primary, condition: 'Good' };
-    return { color: colors.warning, condition: 'Limited' };
+  const getVisibilityColor = (quality: string) => {
+    switch (quality) {
+      case 'Excellent': return colors.success;
+      case 'Good': return colors.primary;
+      case 'Fair': return colors.secondary;
+      case 'Poor': return colors.warning;
+      case 'Very Poor': return colors.error;
+      default: return colors.text;
+    }
+  };
+
+  const getConditionColor = (condition: string) => {
+    switch (condition) {
+      case 'Calm': case 'None': return colors.success;
+      case 'Light': return colors.primary;
+      case 'Moderate': return colors.secondary;
+      case 'Strong': return colors.warning;
+      case 'Very Strong': return colors.error;
+      default: return colors.text;
+    }
   };
 
   const getTempCondition = (temp: number) => {
-    if (temp > 24) return { color: colors.success, condition: 'Warm' };
-    if (temp > 18) return { color: colors.primary, condition: 'Cool' };
+    if (temp > 20) return { color: colors.success, condition: 'Warm' };
+    if (temp > 15) return { color: colors.primary, condition: 'Cool' };
     return { color: colors.warning, condition: 'Cold' };
   };
 
-  const getTimeCondition = (time: number) => {
-    if (time > 50) return { color: colors.success, condition: 'Extended' };
-    if (time > 30) return { color: colors.primary, condition: 'Standard' };
+  const getDurationCondition = (duration: number) => {
+    if (duration > 50) return { color: colors.success, condition: 'Extended' };
+    if (duration > 30) return { color: colors.primary, condition: 'Standard' };
     return { color: colors.warning, condition: 'Short' };
   };
 
   const depthInfo = getDepthCondition(diveDetails.depth);
-  const visibilityInfo = getVisibilityCondition(diveDetails.visibility || 0);
   const tempInfo = getTempCondition(diveDetails.waterTemp || 0);
-  const timeInfo = getTimeCondition(diveDetails.bottomTime);
+  const durationInfo = getDurationCondition(diveDetails.diveDuration);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.overlay }, style]}>
@@ -67,27 +82,27 @@ export const DiveStatsCard: React.FC<DiveStatsCardProps> = ({ diveDetails, style
 
         <ThemedView style={styles.statGroup}>
           <ThemedView style={styles.statHeader}>
-            <IconSymbol name="clock" size={18} color={timeInfo.color} />
-            <ThemedText style={[styles.statLabel, { color: colors.text }]}>Bottom Time</ThemedText>
+            <IconSymbol name="clock" size={18} color={durationInfo.color} />
+            <ThemedText style={[styles.statLabel, { color: colors.text }]}>Dive Duration</ThemedText>
           </ThemedView>
-          <ThemedText style={[styles.primaryValue, { color: timeInfo.color }]}>
-            {diveDetails.bottomTime}min
+          <ThemedText style={[styles.primaryValue, { color: durationInfo.color }]}>
+            {diveDetails.diveDuration}min
           </ThemedText>
-          <ThemedText style={[styles.conditionText, { color: timeInfo.color }]}>
-            {timeInfo.condition}
+          <ThemedText style={[styles.conditionText, { color: durationInfo.color }]}>
+            {durationInfo.condition}
           </ThemedText>
         </ThemedView>
       </ThemedView>
 
-      {/* Secondary Stats Row */}
+      {/* Cape Town Dive Conditions */}
       <ThemedView style={styles.secondaryStats}>
         <ThemedView style={styles.miniStat}>
           <ThemedView style={styles.iconContainer}>
-            <IconSymbol name="eye" size={16} color={visibilityInfo.color} />
+            <IconSymbol name="eye" size={16} color={getVisibilityColor(diveDetails.visibilityQuality)} />
           </ThemedView>
           <ThemedView style={styles.miniStatText}>
-            <ThemedText style={[styles.miniValue, { color: visibilityInfo.color }]}>
-              {diveDetails.visibility || 'N/A'}m
+            <ThemedText style={[styles.miniValue, { color: getVisibilityColor(diveDetails.visibilityQuality) }]}>
+              {diveDetails.visibilityQuality}
             </ThemedText>
             <ThemedText style={[styles.miniLabel, { color: colors.text }]}>Visibility</ThemedText>
           </ThemedView>
@@ -105,44 +120,45 @@ export const DiveStatsCard: React.FC<DiveStatsCardProps> = ({ diveDetails, style
           </ThemedView>
         </ThemedView>
 
-        {diveDetails.conditions && (
-          <ThemedView style={styles.miniStat}>
-            <ThemedView style={styles.iconContainer}>
-              <IconSymbol name="wind" size={16} color={colors.secondary} />
-            </ThemedView>
-            <ThemedView style={styles.miniStatText}>
-              <ThemedText style={[styles.miniValue, { color: colors.secondary }]}>
-                {diveDetails.conditions}
-              </ThemedText>
-              <ThemedText style={[styles.miniLabel, { color: colors.text }]}>Conditions</ThemedText>
-            </ThemedView>
+        <ThemedView style={styles.miniStat}>
+          <ThemedView style={styles.iconContainer}>
+            <IconSymbol name="wind" size={16} color={getConditionColor(diveDetails.windConditions)} />
           </ThemedView>
-        )}
+          <ThemedView style={styles.miniStatText}>
+            <ThemedText style={[styles.miniValue, { color: getConditionColor(diveDetails.windConditions) }]}>
+              {diveDetails.windConditions}
+            </ThemedText>
+            <ThemedText style={[styles.miniLabel, { color: colors.text }]}>Wind</ThemedText>
+          </ThemedView>
+        </ThemedView>
 
         <ThemedView style={styles.miniStat}>
           <ThemedView style={styles.iconContainer}>
-            <IconSymbol name="calendar" size={16} color={colors.accent} />
+            <IconSymbol name="water.waves" size={16} color={getConditionColor(diveDetails.currentConditions)} />
           </ThemedView>
           <ThemedView style={styles.miniStatText}>
-            <ThemedText style={[styles.miniValue, { color: colors.accent }]}>
-              {diveDetails.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            <ThemedText style={[styles.miniValue, { color: getConditionColor(diveDetails.currentConditions) }]}>
+              {diveDetails.currentConditions}
             </ThemedText>
-            <ThemedText style={[styles.miniLabel, { color: colors.text }]}>Dive Date</ThemedText>
+            <ThemedText style={[styles.miniLabel, { color: colors.text }]}>Current</ThemedText>
           </ThemedView>
         </ThemedView>
+
+
       </ThemedView>
 
-      {/* Equipment and Buddies */}
-      {(diveDetails.equipment?.length || diveDetails.buddyNames?.length) && (
+      {/* Marine Life, Dive Companions & Timestamp */}
+      {(diveDetails.seaLife?.length || diveDetails.buddyNames?.length || diveDetails.diveTimestamp) && (
         <ThemedView style={styles.additionalInfo}>
-          {diveDetails.equipment && diveDetails.equipment.length > 0 && (
+          {diveDetails.seaLife && diveDetails.seaLife.length > 0 && (
             <ThemedView style={styles.infoRow}>
               <ThemedView style={styles.infoIconContainer}>
-                <IconSymbol name="wrench.and.screwdriver" size={14} color={colors.secondary} />
+                <IconSymbol name="pawprint" size={14} color={colors.like} />
               </ThemedView>
               <ThemedText style={[styles.infoText, { color: colors.text }]}>
-                {diveDetails.equipment.slice(0, 3).join(', ')}
-                {diveDetails.equipment.length > 3 && ` +${diveDetails.equipment.length - 3} more`}
+                <ThemedText style={[styles.infoLabel, { color: colors.like }]}>Sea Life: </ThemedText>
+                {diveDetails.seaLife.slice(0, 4).join(', ')}
+                {diveDetails.seaLife.length > 4 && ` +${diveDetails.seaLife.length - 4} more`}
               </ThemedText>
             </ThemedView>
           )}
@@ -153,7 +169,26 @@ export const DiveStatsCard: React.FC<DiveStatsCardProps> = ({ diveDetails, style
                 <IconSymbol name="person.2" size={14} color={colors.accent} />
               </ThemedView>
               <ThemedText style={[styles.infoText, { color: colors.text }]}>
-                With {diveDetails.buddyNames.join(', ')}
+                <ThemedText style={[styles.infoLabel, { color: colors.accent }]}>Buddies: </ThemedText>
+                {diveDetails.buddyNames.join(', ')}
+              </ThemedText>
+            </ThemedView>
+          )}
+
+          {diveDetails.diveTimestamp && (
+            <ThemedView style={styles.infoRow}>
+              <ThemedView style={styles.infoIconContainer}>
+                <IconSymbol name="clock.badge.checkmark" size={14} color={colors.share} />
+              </ThemedView>
+              <ThemedText style={[styles.infoText, { color: colors.text }]}>
+                <ThemedText style={[styles.infoLabel, { color: colors.share }]}>Recorded: </ThemedText>
+                {diveDetails.diveTimestamp.toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })}
               </ThemedText>
             </ThemedView>
           )}
@@ -256,5 +291,9 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     flex: 1,
     lineHeight: 16,
+  },
+  infoLabel: {
+    fontWeight: '600',
+    opacity: 1,
   },
 });

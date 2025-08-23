@@ -9,40 +9,51 @@ import { Dimensions, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Mock dive spots data
+// Cape Town dive spots data
 const popularDiveSpots = [
   {
     id: '1',
-    name: 'Great Blue Hole',
-    location: 'Belize',
-    difficulty: 'Advanced' as const,
-    maxDepth: 124,
+    name: 'Seal Island',
+    location: 'False Bay, Cape Town',
+    difficulty: 'Intermediate' as const,
+    maxDepth: 25,
     waterType: 'Salt' as const,
-    visibility: 30,
-    description: 'World-famous blue hole with stunning stalactite formations',
-    imageUri: require('@/assets/images/react-logo.png'), // Placeholder
+    visibility: 10,
+    description: 'Famous for Great White shark cage diving and seal colonies',
+    imageUri: require('@/assets/images/ds1.jpg'),
   },
   {
     id: '2', 
-    name: 'Blue Corner',
-    location: 'Palau',
-    difficulty: 'Intermediate' as const,
-    maxDepth: 35,
+    name: 'Two Oceans Aquarium',
+    location: 'V&A Waterfront, Cape Town',
+    difficulty: 'Beginner' as const,
+    maxDepth: 12,
     waterType: 'Salt' as const,
-    visibility: 40,
-    description: 'Incredible current dive with sharks, mantas, and schooling fish',
-    imageUri: require('@/assets/images/react-logo.png'), // Placeholder
+    visibility: 15,
+    description: 'Perfect for beginners with excellent visibility and diverse marine life',
+    imageUri: require('@/assets/images/ds2.jpg'),
   },
   {
     id: '3',
-    name: 'Cenote Dos Ojos',
-    location: 'Mexico',
-    difficulty: 'Beginner' as const,
-    maxDepth: 15,
-    waterType: 'Fresh' as const,
-    visibility: 50,
-    description: 'Crystal clear cenote perfect for beginners and cave diving',
-    imageUri: require('@/assets/images/react-logo.png'), // Placeholder
+    name: 'Atlantis Reef',
+    location: 'Atlantic Seaboard, Cape Town',
+    difficulty: 'Intermediate' as const,
+    maxDepth: 20,
+    waterType: 'Salt' as const,
+    visibility: 12,
+    description: 'Pristine reef system with incredible kelp forests',
+    imageUri: require('@/assets/images/ds3.jpg'),
+  },
+  {
+    id: '4',
+    name: 'Castle Rock',
+    location: 'Cape Peninsula, Cape Town',
+    difficulty: 'Advanced' as const,
+    maxDepth: 30,
+    waterType: 'Salt' as const,
+    visibility: 8,
+    description: 'Dramatic underwater topography with caves and swim-throughs',
+    imageUri: require('@/assets/images/ds4.jpg'),
   },
 ];
 
@@ -73,9 +84,9 @@ export default function ExploreScreen() {
       showsVerticalScrollIndicator={false}
     >
       <ThemedView style={[styles.header, { backgroundColor: colors.surface }]}>
-        <ThemedText type="title" style={{ color: colors.primary }}>🌊 Explore Dive Spots</ThemedText>
+        <ThemedText type="title" style={{ color: colors.primary }}>🌊 Cape Town Dive Spots</ThemedText>
         <ThemedText style={[styles.subtitle, { color: colors.secondary }]}>
-          Discover amazing underwater locations worldwide
+          Discover the Mother City's underwater wonders 🦭🦈
         </ThemedText>
       </ThemedView>
 

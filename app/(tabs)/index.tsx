@@ -21,21 +21,24 @@ const mockPosts = [
       profileImageUri: null,
     },
     diveSpot: {
-      name: 'Blue Corner, Palau',
-      coordinates: { latitude: 7.3037, longitude: 134.5130 },
+      name: 'Seal Island',
+      coordinates: { latitude: -34.1369, longitude: 18.5819 },
     },
-    imageUris: [require('@/assets/images/react-logo.png')], // Placeholder
-    caption: 'Amazing visibility today! Saw a school of hammerhead sharks 🦈',
+    imageUris: [require('@/assets/images/ds1.jpg')],
+    caption: 'Incredible Great White encounter at Seal Island! The seals were so playful 🦭🦈',
     diveDetails: {
       date: new Date('2024-01-15'),
-      depth: 28,
-      bottomTime: 45,
-      visibility: 30,
-      waterTemp: 28,
-      conditions: 'Calm',
-      equipment: ['BCD', 'Regulator', 'Wetsuit 3mm', 'Fins', 'Mask'],
+      depth: 22,
+      diveDuration: 35,
+      visibilityQuality: 'Good',
+      waterTemp: 17,
+      windConditions: 'Light',
+      currentConditions: 'Moderate',
+      seaLife: ['Great White Shark', 'Cape Fur Seals', 'Bronze Whaler Shark', 'Kelp Fish'],
+      equipment: ['BCD', 'Regulator', 'Wetsuit 7mm', 'Fins', 'Mask', 'Camera'],
       buddyNames: ['Alex', 'Jordan'],
-      notes: 'Amazing visibility today! Perfect conditions for photography.',
+      diveTimestamp: new Date('2024-01-15T14:30:00'),
+      notes: 'Amazing encounter with a 4-meter Great White! Perfect conditions for photography.',
     },
     likes: [],
     comments: [],
@@ -49,25 +52,90 @@ const mockPosts = [
       profileImageUri: null,
     },
     diveSpot: {
-      name: 'Great Blue Hole, Belize',
-      coordinates: { latitude: 17.3189, longitude: -87.5353 },
+      name: 'Two Oceans Aquarium',
+      coordinates: { latitude: -33.9028, longitude: 18.4201 },
     },
-    imageUris: [require('@/assets/images/react-logo.png')], // Placeholder
-    caption: 'The cathedral of stalactites never gets old. What a magical place! 🏛️',
+    imageUris: [require('@/assets/images/ds2.jpg')],
+    caption: 'Perfect beginner dive with incredible kelp forest! So many colorful nudibranchs 🌊🐠',
     diveDetails: {
       date: new Date('2024-01-14'),
-      depth: 40,
-      bottomTime: 38,
-      visibility: 25,
-      waterTemp: 26,
-      conditions: 'Moderate Current',
-      equipment: ['BCD', 'Regulator', 'Wetsuit 5mm', 'Fins', 'Mask', 'Dive Computer'],
+      depth: 12,
+      diveDuration: 45,
+      visibilityQuality: 'Excellent',
+      waterTemp: 16,
+      windConditions: 'Calm',
+      currentConditions: 'None',
+      seaLife: ['Klipfish', 'Nudibranch', 'Sea Anemone', 'Hermit Crab', 'Octopus'],
+      equipment: ['BCD', 'Regulator', 'Wetsuit 5mm', 'Fins', 'Mask', 'Camera'],
       buddyNames: ['Taylor'],
-      notes: 'Strong currents but incredible marine life. Saw nurse sharks and eagle rays.',
+      diveTimestamp: new Date('2024-01-14T10:15:00'),
+      notes: 'Perfect conditions for underwater photography. Amazing kelp forest with diverse marine life.',
     },
     likes: [],
     comments: [],
     createdAt: new Date('2024-01-14'),
+  },
+  {
+    id: '3',
+    user: {
+      displayName: 'Emma Reef',
+      username: '@emmareef',
+      profileImageUri: null,
+    },
+    diveSpot: {
+      name: 'Atlantis Reef',
+      coordinates: { latitude: -33.8567, longitude: 18.3026 },
+    },
+    imageUris: [require('@/assets/images/ds3.jpg')],
+    caption: 'Stunning kelp forest dive with incredible visibility! The reef was alive with fish 🐟🌿',
+    diveDetails: {
+      date: new Date('2024-01-13'),
+      depth: 18,
+      diveDuration: 50,
+      visibilityQuality: 'Excellent',
+      waterTemp: 15,
+      windConditions: 'Light',
+      currentConditions: 'Light',
+      seaLife: ['Red Roman', 'Yellowtail', 'Cape Stumpnose', 'Sea Bamboo', 'Pyjama Shark'],
+      equipment: ['BCD', 'Regulator', 'Wetsuit 5mm', 'Fins', 'Mask', 'Camera'],
+      buddyNames: ['Sophie', 'Marcus'],
+      diveTimestamp: new Date('2024-01-13T13:45:00'),
+      notes: 'Perfect conditions with amazing kelp forest. Great diversity of Cape reef fish.',
+    },
+    likes: [],
+    comments: [],
+    createdAt: new Date('2024-01-13'),
+  },
+  {
+    id: '4',
+    user: {
+      displayName: 'Jake Wreck',
+      username: '@jakewreck',
+      profileImageUri: null,
+    },
+    diveSpot: {
+      name: 'Castle Rock',
+      coordinates: { latitude: -34.3578, longitude: 18.4678 },
+    },
+    imageUris: [require('@/assets/images/ds4.jpg')],
+    caption: 'Advanced dive at Castle Rock with strong currents but incredible pelagics! 🦈⚡',
+    diveDetails: {
+      date: new Date('2024-01-12'),
+      depth: 28,
+      diveDuration: 35,
+      visibilityQuality: 'Fair',
+      waterTemp: 14,
+      windConditions: 'Strong',
+      currentConditions: 'Strong',
+      seaLife: ['Bronze Whaler Shark', 'Yellowtail', 'Cape Fur Seal', 'Steentjie', 'Kelp Gull'],
+      equipment: ['BCD', 'Regulator', 'Wetsuit 7mm', 'Fins', 'Mask', 'Dive Computer', 'Safety Sausage'],
+      buddyNames: ['Rachel'],
+      diveTimestamp: new Date('2024-01-12T11:20:00'),
+      notes: 'Challenging conditions with strong current, but rewarded with amazing pelagic life including bronze whaler sharks.',
+    },
+    likes: [],
+    comments: [],
+    createdAt: new Date('2024-01-12'),
   },
 ];
 
@@ -159,7 +227,7 @@ export default function FeedScreen() {
               <IconSymbol 
                 name={likedPosts.has(post.id) ? "heart.fill" : "heart"} 
                 size={20} 
-                color={likedPosts.has(post.id) ? colors.error : colors.icon} 
+                color={likedPosts.has(post.id) ? colors.likeActive : colors.like} 
               />
               <ThemedText style={[styles.actionText, { color: colors.text }]}>Like</ThemedText>
             </TouchableOpacity>
@@ -168,7 +236,7 @@ export default function FeedScreen() {
               <IconSymbol 
                 name="bubble.left" 
                 size={20} 
-                color={colors.icon} 
+                color={colors.comment} 
               />
               <ThemedText style={[styles.actionText, { color: colors.text }]}>Comment</ThemedText>
             </TouchableOpacity>
@@ -177,7 +245,7 @@ export default function FeedScreen() {
               <IconSymbol 
                 name="square.and.arrow.up" 
                 size={20} 
-                color={colors.icon} 
+                color={colors.share} 
               />
               <ThemedText style={[styles.actionText, { color: colors.text }]}>Share</ThemedText>
             </TouchableOpacity>

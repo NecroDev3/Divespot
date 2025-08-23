@@ -12,6 +12,12 @@ const seafoam = '#85D5F0';        // Light seafoam blue
 const deepGrey = '#34495E';       // Slightly lighter grey
 const charcoal = '#1C2833';       // Very dark grey/charcoal
 
+// Orange accent colors for interactive elements
+const coral = '#FF6B47';          // Bright coral orange
+const lightCoral = '#FF8A65';     // Lighter coral
+const mutedOrange = '#FF7043';    // Muted orange
+const darkOrange = '#E64A19';     // Darker orange for dark mode
+
 export const Colors = {
   light: {
     text: oceanBlue,
@@ -31,6 +37,11 @@ export const Colors = {
     success: '#27AE60',
     warning: '#F39C12',
     error: '#E74C3C',
+    // Interactive button colors
+    like: coral,
+    likeActive: '#FF4757',
+    comment: mutedOrange,
+    share: lightCoral,
   },
   dark: {
     text: seafoam,
@@ -50,5 +61,10 @@ export const Colors = {
     success: '#2ECC71',
     warning: '#F4D03F',
     error: '#EC7063',
+    // Interactive button colors
+    like: lightCoral,
+    likeActive: '#FF6B6B',
+    comment: coral,
+    share: mutedOrange,
   },
 };

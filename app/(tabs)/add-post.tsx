@@ -4,11 +4,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { CAPE_TOWN_DIVE_SPOTS } from '@/types';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface DiveLocation {
   latitude: number;
@@ -21,6 +22,7 @@ export default function AddPostScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [diveLocation, setDiveLocation] = useState<DiveLocation | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
+  const [showPopularSpots, setShowPopularSpots] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -92,6 +94,16 @@ export default function AddPostScreen() {
     setShowMapPicker(!showMapPicker);
   };
 
+  const handlePopularSpotSelect = (spot: typeof CAPE_TOWN_DIVE_SPOTS[0]) => {
+    setDiveLocation({
+      latitude: spot.coordinates.latitude,
+      longitude: spot.coordinates.longitude,
+      name: spot.name,
+      address: spot.address,
+    });
+    setShowPopularSpots(false);
+  };
+
   return (
     <ScrollView 
       style={[styles.container, { backgroundColor: colors.background }]} 
@@ -138,17 +150,27 @@ export default function AddPostScreen() {
             style={[styles.locationButton, { borderColor: colors.border, backgroundColor: colors.surface }]} 
             onPress={getCurrentLocation}
           >
-            <IconSymbol name="location.circle" size={24} color={colors.primary} />
+            <IconSymbol name="location.circle" size={20} color={colors.primary} />
             <ThemedText style={[styles.locationText, { color: colors.text }]}>
               Current Location
             </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.locationButton, styles.mapButton, { borderColor: colors.border, backgroundColor: colors.primary }]} 
+            style={[styles.locationButton, { borderColor: colors.orange || colors.like, backgroundColor: colors.orange || colors.like }]} 
+            onPress={() => setShowPopularSpots(true)}
+          >
+            <IconSymbol name="star.circle" size={20} color="white" />
+            <ThemedText style={[styles.locationText, { color: 'white' }]}>
+              Popular Spots
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.locationButton, { borderColor: colors.border, backgroundColor: colors.primary }]} 
             onPress={handleMapPickerToggle}
           >
-            <IconSymbol name="map" size={24} color="white" />
+            <IconSymbol name="map" size={20} color="white" />
             <ThemedText style={[styles.locationText, { color: 'white' }]}>
               Choose on Map
             </ThemedText>
@@ -181,6 +203,71 @@ export default function AddPostScreen() {
           />
         )}
       </ThemedView>
+
+      {/* Popular Cape Town Dive Spots Modal */}
+      <Modal
+        visible={showPopularSpots}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <ThemedView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <ThemedView style={[styles.modalHeader, { backgroundColor: colors.surface }]}>
+            <ThemedText type="title" style={{ color: colors.primary }}>
+              🌊 Cape Town Dive Spots
+            </ThemedText>
+            <TouchableOpacity onPress={() => setShowPopularSpots(false)}>
+              <IconSymbol name="xmark.circle" size={28} color={colors.error} />
+            </TouchableOpacity>
+          </ThemedView>
+          
+          <ScrollView style={styles.spotsContainer} showsVerticalScrollIndicator={false}>
+            {CAPE_TOWN_DIVE_SPOTS.map((spot, index) => (
+              <TouchableOpacity 
+                key={index}
+                style={[styles.spotCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => handlePopularSpotSelect(spot)}
+              >
+                <ThemedView style={styles.spotHeader}>
+                  <ThemedText style={[styles.spotName, { color: colors.text }]}>
+                    {spot.name}
+                  </ThemedText>
+                  <ThemedView style={[styles.difficultyBadge, { 
+                    backgroundColor: spot.difficulty === 'Beginner' ? colors.success : 
+                                   spot.difficulty === 'Intermediate' ? colors.warning : colors.error 
+                  }]}>
+                    <ThemedText style={styles.difficultyText}>{spot.difficulty}</ThemedText>
+                  </ThemedView>
+                </ThemedView>
+                
+                <ThemedText style={[styles.spotDescription, { color: colors.text }]}>
+                  {spot.description}
+                </ThemedText>
+                
+                <ThemedView style={styles.spotDetails}>
+                  <ThemedView style={styles.spotDetailItem}>
+                    <IconSymbol name="arrow.down" size={16} color={colors.primary} />
+                    <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
+                      Max {spot.maxDepth}m
+                    </ThemedText>
+                  </ThemedView>
+                  <ThemedView style={styles.spotDetailItem}>
+                    <IconSymbol name="eye" size={16} color={colors.primary} />
+                    <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
+                      {spot.visibility}m visibility
+                    </ThemedText>
+                  </ThemedView>
+                  <ThemedView style={styles.spotDetailItem}>
+                    <IconSymbol name="thermometer" size={16} color={colors.primary} />
+                    <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
+                      {spot.temperature}°C
+                    </ThemedText>
+                  </ThemedView>
+                </ThemedView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </ThemedView>
+      </Modal>
 
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle" style={styles.sectionTitle}>Dive Details</ThemedText>
@@ -252,24 +339,26 @@ const styles = StyleSheet.create({
   },
    locationButtons: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
   },
   locationButton: {
     flex: 1,
+    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 8,
+    gap: 6,
   },
   mapButton: {
     // Specific styling for the map button
   },
   locationText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   selectedLocationCard: {
@@ -314,5 +403,74 @@ const styles = StyleSheet.create({
   shareButtonText: {
     fontWeight: '600',
     fontSize: 18,
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  spotsContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  spotCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  spotHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  spotName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  difficultyText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  spotDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+    opacity: 0.8,
+    lineHeight: 20,
+  },
+  spotDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  spotDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  spotDetailText: {
+    fontSize: 12,
+    opacity: 0.8,
   },
 });
