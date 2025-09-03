@@ -275,7 +275,7 @@ export default function FeedScreen() {
         />
         <ThemedView style={styles.headerOverlay}>
           <ThemedText type="title" style={styles.headerTitle}>DiveSpot</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>Discover Cape Town's underwater adventures</ThemedText>
+          <ThemedText style={styles.headerSubtitle}>Discover Cape Town&apos;s underwater adventures</ThemedText>
         </ThemedView>
       </ThemedView>
 

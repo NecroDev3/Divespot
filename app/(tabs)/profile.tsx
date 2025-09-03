@@ -5,7 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Image } from 'expo-image';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import { userService } from '@/services/userService';
 import ProfileEditModal from '@/components/ProfileEditModal';
@@ -26,7 +26,8 @@ export default function ProfileScreen() {
     updateProfile, 
     updateProfileImage,
     fetchUserPosts,
-    refreshUserData 
+    refreshUserData,
+    logout 
   } = useUser();
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -60,6 +61,15 @@ export default function ProfileScreen() {
 
   const handleEditProfile = () => {
     setShowEditModal(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
   const handleSaveProfile = async (updatedUser: Partial<User>) => {
@@ -340,6 +350,17 @@ export default function ProfileScreen() {
             Edit Profile
           </ThemedText>
         </TouchableOpacity>
+
+        {/* Logout Button */}
+        <TouchableOpacity 
+          style={[styles.logoutButton, { borderColor: colors.like }]}
+          onPress={handleLogout}
+        >
+          <IconSymbol name="arrow.right.square" size={20} color={colors.like} />
+          <ThemedText style={[styles.logoutButtonText, { color: colors.like }]}>
+            Sign Out
+          </ThemedText>
+        </TouchableOpacity>
       </>
     );
   };
@@ -373,13 +394,15 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Profile Edit Modal */}
-      <ProfileEditModal
-        visible={showEditModal}
-        user={user}
-        onClose={() => setShowEditModal(false)}
-        onSave={handleSaveProfile}
-        onImagePick={showImagePicker}
-      />
+      {user && (
+        <ProfileEditModal
+          visible={showEditModal}
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveProfile}
+          onImagePick={showImagePicker}
+        />
+      )}
     </>
   );
 }
@@ -517,13 +540,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 20,
     marginTop: 24,
-    marginBottom: 40,
+    marginBottom: 16,
     padding: 18,
     borderRadius: 16,
     gap: 10,
   },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginBottom: 40,
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 2,
+    gap: 10,
+  },
   editButtonText: {
     color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  logoutButtonText: {
     fontWeight: '600',
     fontSize: 16,
   },

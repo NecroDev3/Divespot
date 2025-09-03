@@ -7,6 +7,13 @@ interface UserContextType {
   user: User | null;
   userPosts: DivePost[];
   isLoading: boolean;
+  isInitialized: boolean;
+  
+  // Authentication
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  googleAuth: () => Promise<void>;
+  logout: () => Promise<void>;
   
   // Profile management
   setUser: (user: User | null) => void;
@@ -30,22 +37,136 @@ export function UserProvider({ children }: UserProviderProps) {
   const [user, setUserState] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<DivePost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Load user data from storage if available
-    const loadStoredUser = async () => {
+    const initializeApp = async () => {
       try {
+        setIsLoading(true);
+        
+        // For testing auth flow: Clear existing data to force login screen
+        // Comment out the next line after testing authentication
+        await userService.clearUser();
+        
         const userData = await userService.getCurrentUser();
         if (userData) {
+          console.log('Found existing user:', userData.email);
           setUserState(userData);
+        } else {
+          console.log('No existing user found - showing auth screen');
         }
       } catch (error) {
         console.error('Failed to load stored user:', error);
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
-    loadStoredUser();
+    initializeApp();
   }, []);
+
+  // Authentication functions
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      
+      // For MVP, we'll create a user based on email/name
+      // In production, this would authenticate with your backend
+      const existingUser = await userService.getCurrentUser();
+      
+      if (existingUser && existingUser.email === email) {
+        setUserState(existingUser);
+        return;
+      }
+      
+      // Create new user for this email
+      const newUser = await userService.createDefaultUser();
+      const updatedUser = {
+        ...newUser,
+        email: email,
+        displayName: email.split('@')[0], // Use email prefix as display name
+        username: email.split('@')[0].toLowerCase(),
+      };
+      
+      await userService.saveUser(updatedUser);
+      setUserState(updatedUser);
+      
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw new Error('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signup = async (email: string, password: string, displayName: string) => {
+    try {
+      setIsLoading(true);
+      
+      // For MVP, create user with provided details
+      // In production, this would register with your backend
+      const newUser = await userService.createDefaultUser();
+      const updatedUser = {
+        ...newUser,
+        email: email,
+        displayName: displayName,
+        username: email.split('@')[0].toLowerCase(),
+        id: `user-${Date.now()}`, // Generate unique ID
+      };
+      
+      await userService.saveUser(updatedUser);
+      setUserState(updatedUser);
+      
+    } catch (error) {
+      console.error('Signup failed:', error);
+      throw new Error('Account creation failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const googleAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      // For MVP, create a default Google user
+      // In production, this would use actual Google Auth SDK
+      const googleUser = await userService.createDefaultUser();
+      const updatedUser = {
+        ...googleUser,
+        email: 'google.user@gmail.com',
+        displayName: 'Google User',
+        username: 'googleuser',
+        id: `google-user-${Date.now()}`,
+      };
+      
+      await userService.saveUser(updatedUser);
+      setUserState(updatedUser);
+      
+      Alert.alert('Success', 'Signed in with Google! (Demo)');
+      
+    } catch (error) {
+      console.error('Google auth failed:', error);
+      throw new Error('Google sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      await userService.clearUser();
+      setUserState(null);
+      setUserPosts([]);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const setUser = (userData: User | null) => {
     setUserState(userData);
@@ -167,6 +288,11 @@ export function UserProvider({ children }: UserProviderProps) {
     user,
     userPosts,
     isLoading,
+    isInitialized,
+    login,
+    signup,
+    googleAuth,
+    logout,
     setUser,
     updateProfile,
     updateProfileImage,

@@ -86,7 +86,7 @@ export default function ExploreScreen() {
       <ThemedView style={[styles.header, { backgroundColor: colors.background }]}>
         <ThemedText type="title" style={{ color: colors.primary }}>Cape Town DiveSpots</ThemedText>
         <ThemedText style={[styles.subtitle, { color: colors.like}]}>
-          Discover the Mother City's underwater wonders 🦭🦈
+          Discover the Mother City&apos;s underwater wonders 🦭🦈
         </ThemedText>
       </ThemedView>
 

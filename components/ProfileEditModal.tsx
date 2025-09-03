@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ScrollView,
@@ -45,14 +45,27 @@ export default function ProfileEditModal({
   const colors = Colors[colorScheme ?? 'light'];
 
   const [formData, setFormData] = useState({
-    displayName: user.displayName,
-    username: user.username,
-    bio: user.bio || '',
-    location: user.location || '',
-    certificationLevel: user.stats.certificationLevel,
+    displayName: user?.displayName || '',
+    username: user?.username || '',
+    bio: user?.bio || '',
+    location: user?.location || '',
+    certificationLevel: user?.stats?.certificationLevel || 'Open Water',
   });
 
   const [showCertificationPicker, setShowCertificationPicker] = useState(false);
+
+  // Update form data when user prop changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        displayName: user.displayName || '',
+        username: user.username || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        certificationLevel: user.stats?.certificationLevel || 'Open Water',
+      });
+    }
+  }, [user]);
 
   const handleSave = () => {
     if (!formData.displayName.trim()) {

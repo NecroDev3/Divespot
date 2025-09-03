@@ -119,6 +119,39 @@ const mockUserPosts: DivePost[] = [
 
 class UserService {
   // User management
+  async createDefaultUser(): Promise<User> {
+    try {
+      const defaultUser: User = {
+        id: 'user-123',
+        username: 'capetowndiver',
+        email: 'diver@capetown.com',
+        displayName: 'Cape Town Diver',
+        bio: 'PADI Advanced Open Water | Exploring Cape Town\'s incredible underwater world 🌊🦭',
+        location: 'Cape Town, South Africa',
+        profileImageUri: undefined,
+        stats: {
+          totalDives: 47,
+          maxDepth: 35,
+          totalBottomTime: 1420,
+          certificationLevel: 'Advanced Open Water',
+          favoriteSpot: 'Seal Island',
+        },
+        createdAt: new Date(),
+      };
+      
+      // Save the default user to storage
+      await this.saveUser(defaultUser);
+      
+      // Initialize mock data for the user
+      await this.initializeMockData(defaultUser.id);
+      
+      return defaultUser;
+    } catch (error) {
+      console.error('Failed to create default user:', error);
+      throw error;
+    }
+  }
+
   async getCurrentUser(): Promise<User | null> {
     try {
       const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER);
