@@ -3,7 +3,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { format } from 'date-fns';
 import { Image } from 'expo-image';
 import React from 'react';
-import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 import { DivePost } from '../types';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
@@ -194,6 +194,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
+    ...Platform.select({
+      web: {
+        maxWidth: 600,
+        alignSelf: 'center',
+        width: '90%',
+        marginHorizontal: 'auto',
+      },
+    }),
   },
   header: {
     flexDirection: 'row',
@@ -273,6 +281,13 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 20,
     marginBottom: 20,
+    ...Platform.select({
+      web: {
+        height: 160,
+        maxWidth: 500,
+        alignSelf: 'center',
+      },
+    }),
   },
   socialActions: {
     flexDirection: 'row',

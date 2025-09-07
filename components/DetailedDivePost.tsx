@@ -3,7 +3,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { format } from 'date-fns';
 import { Image } from 'expo-image';
 import React from 'react';
-import { Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 import { DivePost } from '../types';
 import { DiveStatsCard } from './DiveStatsCard';
 import { ThemedText } from './ThemedText';
@@ -65,9 +65,18 @@ export const DetailedDivePost: React.FC<DetailedDivePostProps> = ({
       <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <ThemedView style={[styles.header, { backgroundColor: colors.surface }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <IconSymbol name="xmark" size={24} color={colors.text} />
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            // Web-specific back button
+            <TouchableOpacity onPress={onClose} style={[styles.webBackButton, { backgroundColor: colors.overlay, borderColor: colors.border }]}>
+              <IconSymbol name="chevron.left" size={20} color={colors.text} />
+              <ThemedText style={[styles.webBackText, { color: colors.text }]}>Back</ThemedText>
+            </TouchableOpacity>
+          ) : (
+            // Mobile close button
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <IconSymbol name="xmark" size={24} color={colors.text} />
+            </TouchableOpacity>
+          )}
           <ThemedText style={[styles.headerTitle, { color: colors.text }]}>Dive Details</ThemedText>
           <View style={styles.placeholder} />
         </ThemedView>
@@ -291,6 +300,19 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  webBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  webBackText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -384,6 +406,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     borderRadius: 16,
+    ...Platform.select({
+      web: {
+        height: 180,
+        maxWidth: 400,
+        alignSelf: 'center',
+      },
+    }),
   },
   conditionsSection: {
     paddingHorizontal: 20,

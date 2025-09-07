@@ -5,7 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Image } from 'expo-image';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, Platform } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import { userService } from '@/services/userService';
 import ProfileEditModal from '@/components/ProfileEditModal';
@@ -434,6 +434,13 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
+    ...Platform.select({
+      web: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+      },
+    }),
   },
   editImageButton: {
     position: 'absolute',
@@ -544,6 +551,13 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     gap: 10,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+        marginHorizontal: 0,
+      },
+    }),
   },
   logoutButton: {
     flexDirection: 'row',
@@ -555,6 +569,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     gap: 10,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+        marginHorizontal: 0,
+      },
+    }),
   },
   editButtonText: {
     color: 'white',
