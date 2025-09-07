@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 
 interface DiveLocation {
   latitude: number;
@@ -326,6 +326,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
+    ...Platform.select({
+      web: {
+        width: 60,
+        height: 60,
+      },
+    }),
   },
   addImageContainer: {
     flexDirection: 'row',
@@ -349,6 +355,13 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 24,
     paddingHorizontal: 8,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+        paddingHorizontal: 0,
+      },
+    }),
   },
   locationButton: {
     flex: 1,
@@ -408,6 +421,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+        marginHorizontal: 0,
+      },
+    }),
   },
   shareButtonText: {
     fontWeight: '600',

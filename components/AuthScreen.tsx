@@ -317,6 +317,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 4,
     marginBottom: 32,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+      },
+    }),
   },
   modeButton: {
     flex: 1,
@@ -330,6 +336,12 @@ const styles = StyleSheet.create({
   },
   formFields: {
     marginBottom: 24,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+      },
+    }),
   },
   inputContainer: {
     marginBottom: 20,
@@ -351,6 +363,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 24,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+      },
+    }),
   },
   submitButtonText: {
     color: 'white',
@@ -378,6 +396,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 14,
     marginBottom: 32,
+    ...Platform.select({
+      web: {
+        width: '40%',
+        alignSelf: 'center',
+      },
+    }),
   },
   googleButtonText: {
     fontSize: 16,

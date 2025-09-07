@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { DivePost } from '@/types';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Platform } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -326,6 +326,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginBottom: 8,
     overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        height: 120,
+        maxWidth: 800,
+        alignSelf: 'center',
+        borderRadius: 12,
+        marginTop: 16,
+      },
+    }),
   },
   headerImage: {
     width: '100%',

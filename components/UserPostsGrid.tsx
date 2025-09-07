@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -178,6 +179,13 @@ const styles = StyleSheet.create({
   container: {
     padding: spacing,
     flexGrow: 1,
+    ...Platform.select({
+      web: {
+        maxWidth: 600,
+        alignSelf: 'center',
+        width: '100%',
+      },
+    }),
   },
   row: {
     justifyContent: 'space-between',
@@ -197,6 +205,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    ...Platform.select({
+      web: {
+        width: 150,
+        height: 150,
+        margin: 4,
+      },
+    }),
   },
   postImage: {
     width: '100%',

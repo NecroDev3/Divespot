@@ -153,11 +153,18 @@ export default function ProfileEditModal({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <ThemedView style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-              <ThemedText style={[styles.headerButtonText, { color: colors.primary }]}>
-                Cancel
-              </ThemedText>
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <TouchableOpacity onPress={onClose} style={[styles.webBackButton, { backgroundColor: colors.overlay, borderColor: colors.border }]}>
+                <IconSymbol name="chevron.left" size={18} color={colors.text} />
+                <ThemedText style={[styles.webBackText, { color: colors.text }]}>Back</ThemedText>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+                <ThemedText style={[styles.headerButtonText, { color: colors.primary }]}>
+                  Cancel
+                </ThemedText>
+              </TouchableOpacity>
+            )}
             
             <ThemedText type="subtitle">Edit Profile</ThemedText>
             
