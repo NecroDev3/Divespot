@@ -83,10 +83,10 @@ export default function ExploreScreen() {
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      <ThemedView style={[styles.header, { backgroundColor: colors.surface }]}>
-        <ThemedText type="title" style={{ color: colors.primary }}>🌊 Cape Town Dive Spots</ThemedText>
-        <ThemedText style={[styles.subtitle, { color: colors.secondary }]}>
-          Discover the Mother City's underwater wonders 🦭🦈
+      <ThemedView style={[styles.header, { backgroundColor: colors.background }]}>
+        <ThemedText type="title" style={{ color: colors.primary }}>Cape Town DiveSpots</ThemedText>
+        <ThemedText style={[styles.subtitle, { color: colors.like}]}>
+          Discover the Mother City&apos;s underwater wonders 🦭🦈
         </ThemedText>
       </ThemedView>
 
@@ -99,7 +99,7 @@ export default function ExploreScreen() {
             color={colors.primary} 
           />
           <ThemedText style={[styles.searchPlaceholder, { color: colors.text }]}>
-            🔍 Search dive spots, locations...
+            Search dive spots, locations...
           </ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -195,7 +195,7 @@ export default function ExploreScreen() {
             color={colors.secondary} 
           />
           <ThemedText style={styles.mapText}>
-            🗺️ View dive spots on map
+            View dive spots on map
           </ThemedText>
           <ThemedText style={styles.mapSubtext}>
             Coming soon: Interactive map with all dive locations

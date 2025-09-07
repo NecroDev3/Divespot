@@ -147,32 +147,38 @@ export default function AddPostScreen() {
         
         <ThemedView style={styles.locationButtons}>
           <TouchableOpacity 
-            style={[styles.locationButton, { borderColor: colors.border, backgroundColor: colors.surface }]} 
-            onPress={getCurrentLocation}
-          >
-            <IconSymbol name="location.circle" size={20} color={colors.primary} />
-            <ThemedText style={[styles.locationText, { color: colors.text }]}>
-              Current Location
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.locationButton, { borderColor: colors.orange || colors.like, backgroundColor: colors.orange || colors.like }]} 
+            style={[styles.locationButton, { 
+              borderColor: colors.like, 
+              backgroundColor: colors.like,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 3,
+            }]} 
             onPress={() => setShowPopularSpots(true)}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="star.circle" size={20} color="white" />
-            <ThemedText style={[styles.locationText, { color: 'white' }]}>
-              Popular Spots
+            <IconSymbol name="mappin.and.ellipse" size={24} color="white" />
+            <ThemedText style={[styles.locationButtonText, { color: 'white' }]}>
+              Location
             </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.locationButton, { borderColor: colors.border, backgroundColor: colors.primary }]} 
+            style={[styles.locationButton, { 
+              borderColor: colors.primary, 
+              backgroundColor: colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 3,
+            }]} 
             onPress={handleMapPickerToggle}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="map" size={20} color="white" />
-            <ThemedText style={[styles.locationText, { color: 'white' }]}>
-              Choose on Map
+            <IconSymbol name="map" size={24} color="white" />
+            <ThemedText style={[styles.locationButtonText, { color: 'white' }]}>
+              Map
             </ThemedText>
           </TouchableOpacity>
         </ThemedView>
@@ -199,7 +205,7 @@ export default function AddPostScreen() {
         {showMapPicker && (
           <MapLocationPicker
             onLocationSelect={handleLocationSelect}
-            initialLocation={diveLocation}
+            initialLocation={diveLocation ?? undefined}
           />
         )}
       </ThemedView>
@@ -213,7 +219,7 @@ export default function AddPostScreen() {
         <ThemedView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <ThemedView style={[styles.modalHeader, { backgroundColor: colors.surface }]}>
             <ThemedText type="title" style={{ color: colors.primary }}>
-              🌊 Cape Town Dive Spots
+              🌊 Cape Town Locations
             </ThemedText>
             <TouchableOpacity onPress={() => setShowPopularSpots(false)}>
               <IconSymbol name="xmark.circle" size={28} color={colors.error} />
@@ -308,7 +314,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionTitle: {
-    marginBottom: 15,
+    marginBottom: 20,
+    paddingHorizontal: 8,
   },
   imageContainer: {
     flexDirection: 'row',
@@ -337,49 +344,51 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-   locationButtons: {
+  locationButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: 16,
+    marginBottom: 24,
+    paddingHorizontal: 8,
   },
   locationButton: {
     flex: 1,
-    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 0,
+    gap: 10,
   },
-  mapButton: {
-    // Specific styling for the map button
-  },
-  locationText: {
-    fontSize: 12,
+  locationButtonText: {
+    fontSize: 16,
     fontWeight: '600',
   },
   selectedLocationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 20,
+    marginHorizontal: 8,
+    gap: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   locationDetails: {
     flex: 1,
   },
   selectedLocationName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   selectedLocationCoords: {
-    fontSize: 12,
+    fontSize: 13,
     opacity: 0.7,
   },
   placeholder: {
