@@ -7,9 +7,7 @@ import { Image } from 'expo-image';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, Platform } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
-import { userService } from '@/services/userService';
 import ProfileEditModal from '@/components/ProfileEditModal';
-
 import { useProfileImagePicker } from '@/components/ProfileImagePicker';
 import { User } from '@/types';
 
@@ -81,9 +79,30 @@ export default function ProfileScreen() {
     return `${hours}h ${minutes % 60}m`;
   };
 
+  // Simple achievements calculation (moved from deleted userService)
   const getAchievements = () => {
     if (!user) return [];
-    return userService.calculateAchievements(user, userPosts);
+    
+    const achievements: string[] = [];
+
+    // Dive count achievements
+    if (user.stats.totalDives >= 50) achievements.push('Half Century Diver');
+    else if (user.stats.totalDives >= 25) achievements.push('Quarter Century Diver');
+    else if (user.stats.totalDives >= 10) achievements.push('Double Digits');
+    else if (user.stats.totalDives >= 5) achievements.push('Getting Started');
+
+    // Depth achievements
+    if (user.stats.maxDepth >= 30) achievements.push('Deep Sea Explorer');
+    else if (user.stats.maxDepth >= 20) achievements.push('Depth Seeker');
+    else if (user.stats.maxDepth >= 15) achievements.push('Going Deeper');
+
+    // Time achievements
+    const totalHours = Math.floor(user.stats.totalBottomTime / 60);
+    if (totalHours >= 50) achievements.push('Time Master');
+    else if (totalHours >= 25) achievements.push('Experienced');
+    else if (totalHours >= 10) achievements.push('Getting Experience');
+
+    return achievements;
   };
 
   const toggleSection = (section: string) => {

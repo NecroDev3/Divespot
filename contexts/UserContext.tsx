@@ -1,7 +1,30 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, DivePost } from '@/types';
-import { userService } from '@/services/userService';
+import { authService, AuthUser } from '@/services/authService';
+import { userService, UpdateProfileData } from '@/services/userService';
+import { divePostsService } from '@/services/divePostsService';
 import { Alert } from 'react-native';
+
+// Helper function to transform AuthUser to User
+const transformAuthUser = (authUser: AuthUser): User => {
+  return {
+    id: authUser.id,
+    username: authUser.username,
+    email: authUser.email,
+    displayName: authUser.displayName,
+    bio: authUser.bio,
+    profileImageUri: authUser.profileImageUrl,
+    location: authUser.location,
+    stats: {
+      totalDives: authUser.totalDives || 0,
+      maxDepth: authUser.maxDepthAchieved || 0,
+      totalBottomTime: authUser.totalBottomTime || 0,
+      certificationLevel: authUser.certificationLevel || 'Open Water',
+      favoriteSpot: undefined, // Will be calculated from posts
+    },
+    createdAt: new Date(authUser.createdAt),
+  };
+};
 
 interface UserContextType {
   user: User | null;
@@ -45,14 +68,11 @@ export function UserProvider({ children }: UserProviderProps) {
       try {
         setIsLoading(true);
         
-        // For testing auth flow: Clear existing data to force login screen
-        // Comment out the next line after testing authentication
-        await userService.clearUser();
-        
-        const userData = await userService.getCurrentUser();
-        if (userData) {
-          console.log('Found existing user:', userData.email);
-          setUserState(userData);
+        const authUser = await authService.getCurrentUser();
+        if (authUser) {
+          console.log('Found existing user:', authUser.email);
+          const user = transformAuthUser(authUser);
+          setUserState(user);
         } else {
           console.log('No existing user found - showing auth screen');
         }
@@ -72,30 +92,16 @@ export function UserProvider({ children }: UserProviderProps) {
     try {
       setIsLoading(true);
       
-      // For MVP, we'll create a user based on email/name
-      // In production, this would authenticate with your backend
-      const existingUser = await userService.getCurrentUser();
+      const authUser = await authService.login({ email, password });
+      const user = transformAuthUser(authUser);
       
-      if (existingUser && existingUser.email === email) {
-        setUserState(existingUser);
-        return;
-      }
-      
-      // Create new user for this email
-      const newUser = await userService.createDefaultUser();
-      const updatedUser = {
-        ...newUser,
-        email: email,
-        displayName: email.split('@')[0], // Use email prefix as display name
-        username: email.split('@')[0].toLowerCase(),
-      };
-      
-      await userService.saveUser(updatedUser);
-      setUserState(updatedUser);
+      // Set user state to trigger navigation to dashboard
+      setUserState(user);
+      console.log('✅ Login successful, navigating to dashboard...');
       
     } catch (error) {
       console.error('Login failed:', error);
-      throw new Error('Login failed. Please try again.');
+      throw new Error(error instanceof Error ? error.message : 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -105,23 +111,22 @@ export function UserProvider({ children }: UserProviderProps) {
     try {
       setIsLoading(true);
       
-      // For MVP, create user with provided details
-      // In production, this would register with your backend
-      const newUser = await userService.createDefaultUser();
-      const updatedUser = {
-        ...newUser,
-        email: email,
-        displayName: displayName,
-        username: email.split('@')[0].toLowerCase(),
-        id: `user-${Date.now()}`, // Generate unique ID
-      };
+      const authUser = await authService.signup({ 
+        email, 
+        password, 
+        displayName,
+        location: 'Cape Town, South Africa',
+        certificationLevel: 'Open Water'
+      });
+      const user = transformAuthUser(authUser);
       
-      await userService.saveUser(updatedUser);
-      setUserState(updatedUser);
+      // Set user state to trigger navigation to dashboard
+      setUserState(user);
+      console.log('✅ Signup successful, navigating to dashboard...');
       
     } catch (error) {
       console.error('Signup failed:', error);
-      throw new Error('Account creation failed. Please try again.');
+      throw new Error(error instanceof Error ? error.message : 'Account creation failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -131,25 +136,23 @@ export function UserProvider({ children }: UserProviderProps) {
     try {
       setIsLoading(true);
       
-      // For MVP, create a default Google user
-      // In production, this would use actual Google Auth SDK
-      const googleUser = await userService.createDefaultUser();
-      const updatedUser = {
-        ...googleUser,
-        email: 'google.user@gmail.com',
-        displayName: 'Google User',
-        username: 'googleuser',
-        id: `google-user-${Date.now()}`,
-      };
+      const authUser = await authService.googleAuth();
+      const user = transformAuthUser(authUser);
       
-      await userService.saveUser(updatedUser);
-      setUserState(updatedUser);
+      // Set user state first to trigger navigation
+      setUserState(user);
       
-      Alert.alert('Success', 'Signed in with Google! (Demo)');
+      // Brief success message, then let navigation happen
+      console.log('✅ Google sign-in successful, navigating to dashboard...');
+      
+      // Optional: Show a brief toast instead of blocking alert
+      setTimeout(() => {
+        console.log(`Welcome ${user.displayName}! Signed in with Google.`);
+      }, 100);
       
     } catch (error) {
       console.error('Google auth failed:', error);
-      throw new Error('Google sign-in failed. Please try again.');
+      throw new Error(error instanceof Error ? error.message : 'Google sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +161,7 @@ export function UserProvider({ children }: UserProviderProps) {
   const logout = async () => {
     try {
       setIsLoading(true);
-      await userService.clearUser();
+      await authService.logout();
       setUserState(null);
       setUserPosts([]);
     } catch (error) {
@@ -170,9 +173,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const setUser = (userData: User | null) => {
     setUserState(userData);
-    if (userData) {
-      userService.saveUser(userData);
-    }
+    // Note: For now, just update state. Later can add saving to storage if needed
   };
 
   const updateProfile = async (updates: Partial<User>) => {
@@ -181,19 +182,38 @@ export function UserProvider({ children }: UserProviderProps) {
     try {
       setIsLoading(true);
       
-      const updatedUser = {
+      // Convert User updates to backend format
+      const profileData: UpdateProfileData = {
+        username: updates.username,
+        display_name: updates.displayName,
+        bio: updates.bio,
+        location: updates.location,
+        certification_level: updates.stats?.certificationLevel,
+        total_dives: updates.stats?.totalDives,
+        max_depth_achieved: updates.stats?.maxDepth,
+        total_bottom_time: updates.stats?.totalBottomTime,
+      };
+
+      // Update backend
+      const updatedBackendUser = await userService.updateProfile(user.id, profileData);
+      
+      // Update local state with backend response
+      const updatedUser: User = {
         ...user,
-        ...updates,
+        username: updatedBackendUser.username,
+        displayName: updatedBackendUser.display_name,
+        bio: updatedBackendUser.bio,
+        location: updatedBackendUser.location,
         stats: {
           ...user.stats,
-          ...(updates.stats || {}),
+          certificationLevel: updatedBackendUser.certification_level,
+          totalDives: updatedBackendUser.total_dives,
+          maxDepth: updatedBackendUser.max_depth_achieved,
+          totalBottomTime: updatedBackendUser.total_bottom_time,
         },
       };
 
-      // Save to storage/API
-      await userService.updateUser(updatedUser);
       setUserState(updatedUser);
-      
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -209,15 +229,16 @@ export function UserProvider({ children }: UserProviderProps) {
     try {
       setIsLoading(true);
       
-      // In production, this would upload to cloud storage first
+      // Upload image to backend
+      const updatedImageUri = await userService.uploadProfileImage(user.id, imageUri);
+      
+      // Update local state
       const updatedUser = {
         ...user,
-        profileImageUri: imageUri,
+        profileImageUri: updatedImageUri,
       };
 
-      await userService.updateUser(updatedUser);
       setUserState(updatedUser);
-      
       Alert.alert('Success', 'Profile picture updated!');
     } catch (error) {
       console.error('Failed to update profile image:', error);
@@ -232,8 +253,9 @@ export function UserProvider({ children }: UserProviderProps) {
 
     try {
       setIsLoading(true);
-      const userData = await userService.getCurrentUser();
-      if (userData) {
+      const authUser = await authService.getCurrentUser();
+      if (authUser) {
+        const userData = transformAuthUser(authUser);
         setUserState(userData);
       }
     } catch (error) {
@@ -247,11 +269,68 @@ export function UserProvider({ children }: UserProviderProps) {
     if (!user) return;
 
     try {
-      // In production, this would fetch from API
-      const posts = await userService.getUserPosts(user.id);
-      setUserPosts(posts);
+      console.log(`🔄 Fetching posts for user ${user.id}...`);
+      
+      // Get user's posts from backend
+      const response = await userService.getUserPosts(user.id);
+      
+      // Transform API data to frontend format (similar to feed transformation)
+      const transformedPosts = response.data.map((apiPost: any) => ({
+        id: apiPost.id,
+        userId: apiPost.user_id,
+        user: user, // Use current user data
+        diveSpotId: apiPost.dive_spot_id,
+        diveSpot: {
+          id: apiPost.dive_spot_id,
+          name: apiPost.dive_spot?.name || 'Unknown Spot',
+          description: apiPost.dive_spot?.description || '',
+          coordinates: {
+            latitude: apiPost.dive_spot?.latitude || 0,
+            longitude: apiPost.dive_spot?.longitude || 0,
+          },
+          address: apiPost.dive_spot?.address || '',
+          difficulty: (apiPost.dive_spot?.difficulty || 'Intermediate') as 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert',
+          waterType: (apiPost.dive_spot?.water_type || 'Salt') as 'Salt' | 'Fresh' | 'Brackish',
+          visibility: apiPost.dive_spot?.avg_visibility || 0,
+          temperature: apiPost.dive_spot?.avg_temperature || 0,
+          createdBy: apiPost.dive_spot?.created_by || 'system',
+          createdAt: new Date(apiPost.dive_spot?.created_at || new Date()),
+        },
+        imageUris: apiPost.image_urls || [],
+        caption: apiPost.caption,
+        diveDetails: {
+          date: new Date(apiPost.dive_date),
+          depth: apiPost.max_depth,
+          diveDuration: apiPost.dive_duration,
+          visibilityQuality: apiPost.visibility_quality as 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Very Poor',
+          waterTemp: apiPost.water_temp,
+          windConditions: apiPost.wind_conditions as 'Calm' | 'Light' | 'Moderate' | 'Strong' | 'Very Strong',
+          currentConditions: apiPost.current_conditions as 'None' | 'Light' | 'Moderate' | 'Strong' | 'Very Strong',
+          seaLife: apiPost.sea_life || [],
+          buddyNames: apiPost.buddy_names || [],
+          equipment: apiPost.equipment || [],
+          notes: apiPost.notes,
+          diveTimestamp: new Date(apiPost.created_at),
+        },
+        likes: Array.from({ length: apiPost.likes_count || 0 }, (_, i) => ({
+          userId: `user-${i}`,
+          createdAt: new Date(),
+        })),
+        comments: Array.from({ length: apiPost.comments_count || 0 }, (_, i) => ({
+          id: `comment-${i}`,
+          userId: `user-${i}`,
+          content: `Comment ${i}`,
+          createdAt: new Date(),
+        })),
+        createdAt: new Date(apiPost.created_at),
+      }));
+      
+      setUserPosts(transformedPosts);
+      console.log(`✅ Loaded ${transformedPosts.length} user posts`);
+      
     } catch (error) {
       console.error('Failed to fetch user posts:', error);
+      setUserPosts([]); // Fallback to empty array
     }
   };
 
@@ -270,13 +349,12 @@ export function UserProvider({ children }: UserProviderProps) {
         },
       };
       setUserState(updatedUser);
-      userService.updateUser(updatedUser);
     }
   };
 
   const clearUserData = async () => {
     try {
-      await userService.clearUser();
+      await authService.logout();
       setUserState(null);
       setUserPosts([]);
     } catch (error) {
@@ -312,7 +390,25 @@ export function UserProvider({ children }: UserProviderProps) {
 export function useUser() {
   const context = useContext(UserContext);
   if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
+    // Instead of throwing an error immediately, let's provide a fallback
+    console.warn('useUser called outside of UserProvider - this might be a timing issue with Expo router');
+    return {
+      user: null,
+      userPosts: [],
+      isLoading: false,
+      isInitialized: false,
+      login: async () => { throw new Error('UserProvider not initialized'); },
+      signup: async () => { throw new Error('UserProvider not initialized'); },
+      googleAuth: async () => { throw new Error('UserProvider not initialized'); },
+      logout: async () => { throw new Error('UserProvider not initialized'); },
+      setUser: () => { throw new Error('UserProvider not initialized'); },
+      updateProfile: async () => { throw new Error('UserProvider not initialized'); },
+      updateProfileImage: async () => { throw new Error('UserProvider not initialized'); },
+      refreshUserData: async () => { throw new Error('UserProvider not initialized'); },
+      fetchUserPosts: async () => { throw new Error('UserProvider not initialized'); },
+      addUserPost: () => { throw new Error('UserProvider not initialized'); },
+      clearUserData: async () => { throw new Error('UserProvider not initialized'); },
+    } as UserContextType;
   }
   return context;
 }

@@ -253,26 +253,27 @@ export const DetailedDivePost: React.FC<DetailedDivePostProps> = ({
               <TouchableOpacity style={styles.socialButton} onPress={onLike}>
                 <IconSymbol 
                   name={isLiked ? "heart.fill" : "heart"} 
-                  size={24} 
+                  size={26} 
                   color={isLiked ? colors.likeActive : colors.like} 
                 />
-                <ThemedText style={[styles.socialButtonText, { color: colors.text }]}>
-                  Like
-                </ThemedText>
+                {post.likes.length > 0 && (
+                  <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
+                    {post.likes.length}
+                  </ThemedText>
+                )}
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.socialButton} onPress={onComment}>
-                <IconSymbol name="bubble.left" size={24} color={colors.comment} />
-                <ThemedText style={[styles.socialButtonText, { color: colors.text }]}>
-                  Comment
-                </ThemedText>
+                <IconSymbol name="bubble.left" size={26} color={colors.comment} />
+                {post.comments.length > 0 && (
+                  <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
+                    {post.comments.length}
+                  </ThemedText>
+                )}
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.socialButton} onPress={onShare}>
-                <IconSymbol name="square.and.arrow.up" size={24} color={colors.share} />
-                <ThemedText style={[styles.socialButtonText, { color: colors.text }]}>
-                  Share
-                </ThemedText>
+                <IconSymbol name="square.and.arrow.up" size={26} color={colors.share} />
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
@@ -494,9 +495,10 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
   },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+  socialButtonCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   bottomSpacer: {
     height: 40,

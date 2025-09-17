@@ -1,4 +1,4 @@
-#!/Users/F4666852/Desktop/Personal/divespot_backend/.venv/bin/python3.12
+#!/Users/linumlabs/Divespot/divespot_backend/.venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

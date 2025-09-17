@@ -84,6 +84,33 @@ def model_to_dict_comment(c: PostComment):
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
     }
 
+# ----------- Authentication -----------
+
+@api_bp.route("/auth/login", methods=["POST"])
+def login_user():
+    data = request.get_json(force=True)
+    
+    email = data.get("email")
+    password = data.get("password")
+    
+    if not email or not password:
+        return {"error": "Email and password are required"}, 400
+    
+    # Find user by email
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return {"error": "Invalid email or password"}, 401
+    
+    # For MVP, we'll do simple password check (in production, use proper password hashing)
+    if user.password_hash != password:
+        return {"error": "Invalid email or password"}, 401
+    
+    # Update last active time
+    user.last_active_at = datetime.utcnow()
+    db.session.commit()
+    
+    return model_to_dict_user(user), 200
+
 # ----------- Users -----------
 
 @api_bp.route("/users", methods=["POST"])
@@ -302,7 +329,25 @@ def delete_post(post_id):
 def feed():
     q = DivePost.query.order_by(DivePost.created_at.desc())
     items, meta = paginated_query(q, default_limit=20)
-    return {"data": [model_to_dict_post(p) for p in items], "meta": meta}
+    
+    # Enrich posts with user and dive spot information
+    enriched_posts = []
+    for post in items:
+        post_dict = model_to_dict_post(post)
+        
+        # Add user information
+        user = User.query.get(post.user_id)
+        if user:
+            post_dict["user"] = model_to_dict_user(user)
+        
+        # Add dive spot information
+        spot = DiveSpot.query.get(post.dive_spot_id)
+        if spot:
+            post_dict["dive_spot"] = model_to_dict_spot(spot)
+        
+        enriched_posts.append(post_dict)
+    
+    return {"data": enriched_posts, "meta": meta}
 
 # ----------- Likes -----------
 

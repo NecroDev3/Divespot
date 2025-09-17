@@ -69,7 +69,8 @@ export default function AuthScreen({ onLogin, onSignUp, onGoogleAuth }: AuthScre
     try {
       await onGoogleAuth();
     } catch (error) {
-      Alert.alert('Error', 'Google authentication failed');
+      const errorMessage = error instanceof Error ? error.message : 'Google authentication failed';
+      Alert.alert('Google Sign-In Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -244,7 +245,7 @@ export default function AuthScreen({ onLogin, onSignUp, onGoogleAuth }: AuthScre
               color={colors.text}
             />
             <ThemedText style={[styles.googleButtonText, { color: colors.text }]}>
-              Continue with Google
+              {isLoading ? 'Signing in...' : 'Continue with Google'}
             </ThemedText>
           </TouchableOpacity>
 
