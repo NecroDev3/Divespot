@@ -151,12 +151,14 @@ export const CompactDiveCard: React.FC<CompactDiveCardProps> = ({
           >
             <IconSymbol 
               name={isLiked ? "heart.fill" : "heart"} 
-              size={22} 
+              size={24} 
               color={isLiked ? colors.likeActive : colors.like} 
             />
-            <ThemedText style={[styles.actionText, { color: colors.text }]}>
-              {post.likes.length > 0 ? post.likes.length : ''} Like
-            </ThemedText>
+            {post.likes.length > 0 && (
+              <ThemedText style={[styles.actionCount, { color: colors.text }]}>
+                {post.likes.length}
+              </ThemedText>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -164,10 +166,12 @@ export const CompactDiveCard: React.FC<CompactDiveCardProps> = ({
             onPress={onComment}
             activeOpacity={0.7}
           >
-            <IconSymbol name="bubble.left" size={22} color={colors.comment} />
-            <ThemedText style={[styles.actionText, { color: colors.text }]}>
-              {post.comments.length > 0 ? post.comments.length : ''} Comment
-            </ThemedText>
+            <IconSymbol name="bubble.left" size={24} color={colors.comment} />
+            {post.comments.length > 0 && (
+              <ThemedText style={[styles.actionCount, { color: colors.text }]}>
+                {post.comments.length}
+              </ThemedText>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -175,8 +179,7 @@ export const CompactDiveCard: React.FC<CompactDiveCardProps> = ({
             onPress={onShare}
             activeOpacity={0.7}
           >
-            <IconSymbol name="square.and.arrow.up" size={22} color={colors.share} />
-            <ThemedText style={[styles.actionText, { color: colors.text }]}>Share</ThemedText>
+            <IconSymbol name="square.and.arrow.up" size={24} color={colors.share} />
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -308,8 +311,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 4,
   },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '500',
+  actionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

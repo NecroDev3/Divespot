@@ -4,12 +4,15 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useUser } from '@/contexts/UserContext';
 import { CAPE_TOWN_DIVE_SPOTS } from '@/types';
+import { divePostsService, CreateDivePostData } from '@/services/divePostsService';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, Text } from 'react-native';
+import { useRouter } from 'expo-router';
 
 interface DiveLocation {
   latitude: number;
@@ -19,12 +22,31 @@ interface DiveLocation {
 }
 
 export default function AddPostScreen() {
+  const router = useRouter();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [diveLocation, setDiveLocation] = useState<DiveLocation | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [showPopularSpots, setShowPopularSpots] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Dive details form data
+  const [formData, setFormData] = useState({
+    caption: '',
+    maxDepth: '',
+    diveDuration: '',
+    visibilityQuality: 'Good' as CreateDivePostData['visibility_quality'],
+    waterTemp: '',
+    windConditions: 'Light' as CreateDivePostData['wind_conditions'],
+    currentConditions: 'Light' as CreateDivePostData['current_conditions'],
+    seaLife: '',
+    buddyNames: '',
+    equipment: '',
+    notes: '',
+  });
+  
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { user } = useUser();
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -102,6 +124,91 @@ export default function AddPostScreen() {
       address: spot.address,
     });
     setShowPopularSpots(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a dive post');
+      return;
+    }
+
+    // Validation
+    if (!formData.maxDepth || !formData.diveDuration) {
+      Alert.alert('Error', 'Depth and duration are required');
+      return;
+    }
+
+    if (!diveLocation) {
+      Alert.alert('Error', 'Please select a dive location');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Create dive spot first
+      console.log('Creating dive spot for location:', diveLocation);
+      const diveSpotId = await divePostsService.createDiveSpot(
+        diveLocation.latitude,
+        diveLocation.longitude,
+        diveLocation.name,
+        diveLocation.address,
+        user.id
+      );
+
+      const postData: CreateDivePostData = {
+        user_id: user.id,
+        dive_spot_id: diveSpotId,
+        dive_date: divePostsService.formatDateForAPI(new Date()),
+        max_depth: parseInt(formData.maxDepth),
+        dive_duration: parseInt(formData.diveDuration),
+        visibility_quality: formData.visibilityQuality,
+        wind_conditions: formData.windConditions,
+        current_conditions: formData.currentConditions,
+        caption: formData.caption || undefined,
+        image_urls: selectedImages,
+        water_temp: formData.waterTemp ? parseInt(formData.waterTemp) : undefined,
+        sea_life: formData.seaLife ? formData.seaLife.split(',').map(s => s.trim()) : undefined,
+        buddy_names: formData.buddyNames ? formData.buddyNames.split(',').map(s => s.trim()) : undefined,
+        equipment: formData.equipment ? formData.equipment.split(',').map(s => s.trim()) : undefined,
+        notes: formData.notes || undefined,
+        dive_timestamp: new Date().toISOString(),
+      };
+
+      const createdPost = await divePostsService.createDivePost(postData);
+      
+      // Clear form data immediately
+      setFormData({
+        caption: '',
+        maxDepth: '',
+        diveDuration: '',
+        visibilityQuality: 'Good',
+        waterTemp: '',
+        windConditions: 'Light',
+        currentConditions: 'Light',
+        seaLife: '',
+        buddyNames: '',
+        equipment: '',
+        notes: '',
+      });
+      setSelectedImages([]);
+      setDiveLocation(null);
+      
+      // Show success message and navigate to feed
+      Alert.alert('Success!', 'Your dive has been shared! 🌊', [
+        { 
+          text: 'View in Feed', 
+          onPress: () => {
+            router.push('/');
+          }
+        }
+      ]);
+
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create dive post');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -277,13 +384,150 @@ export default function AddPostScreen() {
 
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle" style={styles.sectionTitle}>Dive Details</ThemedText>
-        <ThemedText style={styles.placeholder}>
-          🚧 Coming soon: Dive depth, time, conditions, and more details will be added here
-        </ThemedText>
+        
+        {/* Caption */}
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Caption</ThemedText>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            placeholder="Share your dive experience..."
+            placeholderTextColor={colors.text + '60'}
+            value={formData.caption}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, caption: text }))}
+            multiline
+          />
+        </ThemedView>
+
+        {/* Depth and Duration */}
+        <ThemedView style={styles.rowContainer}>
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Max Depth (m) *</ThemedText>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder="18"
+              placeholderTextColor={colors.text + '60'}
+              value={formData.maxDepth}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, maxDepth: text }))}
+              keyboardType="numeric"
+            />
+          </ThemedView>
+          
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Duration (min) *</ThemedText>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder="45"
+              placeholderTextColor={colors.text + '60'}
+              value={formData.diveDuration}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, diveDuration: text }))}
+              keyboardType="numeric"
+            />
+          </ThemedView>
+        </ThemedView>
+
+        {/* Visibility and Water Temperature */}
+        <ThemedView style={styles.rowContainer}>
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Visibility *</ThemedText>
+            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.visibilityQuality}</Text>
+              {/* Note: For MVP, we'll use text display. In production, add proper picker */}
+            </ThemedView>
+          </ThemedView>
+          
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Water Temp (°C)</ThemedText>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder="16"
+              placeholderTextColor={colors.text + '60'}
+              value={formData.waterTemp}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, waterTemp: text }))}
+              keyboardType="numeric"
+            />
+          </ThemedView>
+        </ThemedView>
+
+        {/* Wind and Current Conditions */}
+        <ThemedView style={styles.rowContainer}>
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Wind Conditions *</ThemedText>
+            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.windConditions}</Text>
+            </ThemedView>
+          </ThemedView>
+          
+          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
+            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Current *</ThemedText>
+            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.currentConditions}</Text>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+
+        {/* Sea Life */}
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Sea Life Spotted</ThemedText>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            placeholder="Seals, kelp fish, octopus..."
+            placeholderTextColor={colors.text + '60'}
+            value={formData.seaLife}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, seaLife: text }))}
+          />
+        </ThemedView>
+
+        {/* Dive Buddies */}
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Dive Buddies</ThemedText>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            placeholder="Alex, Jordan..."
+            placeholderTextColor={colors.text + '60'}
+            value={formData.buddyNames}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, buddyNames: text }))}
+          />
+        </ThemedView>
+
+        {/* Equipment */}
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Equipment Used</ThemedText>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            placeholder="5mm wetsuit, camera, dive computer..."
+            placeholderTextColor={colors.text + '60'}
+            value={formData.equipment}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, equipment: text }))}
+          />
+        </ThemedView>
+
+        {/* Notes */}
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Notes</ThemedText>
+          <TextInput
+            style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            placeholder="Additional dive notes..."
+            placeholderTextColor={colors.text + '60'}
+            value={formData.notes}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+            multiline
+            numberOfLines={3}
+          />
+        </ThemedView>
       </ThemedView>
 
-      <TouchableOpacity style={[styles.shareButton, { backgroundColor: colors.primary }]}>
-        <ThemedText style={[styles.shareButtonText, { color: 'white' }]}>🌊 Share Dive</ThemedText>
+      <TouchableOpacity 
+        style={[
+          styles.shareButton, 
+          { backgroundColor: colors.primary },
+          isSubmitting && { opacity: 0.7 }
+        ]}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
+        <ThemedText style={[styles.shareButtonText, { color: 'white' }]}>
+          {isSubmitting ? '🔄 Sharing...' : '🌊 Share Dive'}
+        </ThemedText>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -501,5 +745,42 @@ const styles = StyleSheet.create({
   spotDetailText: {
     fontSize: 12,
     opacity: 0.8,
+  },
+  // Form input styles
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  pickerContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    justifyContent: 'center',
+  },
+  pickerText: {
+    fontSize: 16,
   },
 });

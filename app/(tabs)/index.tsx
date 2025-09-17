@@ -5,12 +5,85 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { DivePost } from '@/types';
+import { useUser } from '@/contexts/UserContext';
+import { DivePost, User, DiveSpot } from '@/types';
+import { divePostsService } from '@/services/divePostsService';
+import { shareService } from '@/services/shareService';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { Dimensions, ScrollView, StyleSheet, Platform, ActivityIndicator, Alert, Modal, View, TextInput, TouchableOpacity, KeyboardAvoidingView, FlatList } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+// Transform API data to frontend format
+const transformApiPost = (apiPost: any): DivePost => {
+  return {
+    id: apiPost.id,
+    userId: apiPost.user_id,
+    user: {
+      id: apiPost.user.id,
+      username: apiPost.user.username || apiPost.user.email.split('@')[0],
+      email: apiPost.user.email,
+      displayName: apiPost.user.display_name || apiPost.user.username || 'Diver',
+      bio: apiPost.user.bio,
+      profileImageUri: apiPost.user.profile_image_url,
+      location: apiPost.user.location,
+      stats: {
+        totalDives: apiPost.user.total_dives || 0,
+        maxDepth: apiPost.user.max_depth_achieved || 0,
+        totalBottomTime: apiPost.user.total_bottom_time || 0,
+        certificationLevel: apiPost.user.certification_level || 'Open Water',
+        favoriteSpot: apiPost.dive_spot?.name,
+      },
+      createdAt: new Date(apiPost.user.created_at || new Date()),
+    },
+    diveSpot: {
+      id: apiPost.dive_spot.id,
+      name: apiPost.dive_spot.name,
+      description: apiPost.dive_spot.description,
+      coordinates: {
+        latitude: apiPost.dive_spot.latitude,
+        longitude: apiPost.dive_spot.longitude,
+      },
+      address: apiPost.dive_spot.address,
+      maxDepth: apiPost.dive_spot.max_depth,
+      difficulty: (apiPost.dive_spot.difficulty || 'Intermediate') as 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert',
+      waterType: (apiPost.dive_spot.water_type || 'Salt') as 'Salt' | 'Fresh' | 'Brackish',
+      visibility: apiPost.dive_spot.avg_visibility,
+      temperature: apiPost.dive_spot.avg_temperature,
+      createdBy: apiPost.dive_spot.created_by,
+      createdAt: new Date(apiPost.dive_spot.created_at || new Date()),
+    },
+    imageUris: apiPost.image_urls || [],
+    caption: apiPost.caption,
+    diveDetails: {
+      date: new Date(apiPost.dive_date),
+      depth: apiPost.max_depth,
+      diveDuration: apiPost.dive_duration,
+      visibilityQuality: apiPost.visibility_quality as 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Very Poor',
+      waterTemp: apiPost.water_temp,
+      windConditions: apiPost.wind_conditions as 'Calm' | 'Light' | 'Moderate' | 'Strong' | 'Very Strong',
+      currentConditions: apiPost.current_conditions as 'None' | 'Light' | 'Moderate' | 'Strong' | 'Very Strong',
+      seaLife: apiPost.sea_life || [],
+      buddyNames: apiPost.buddy_names || [],
+      equipment: apiPost.equipment || [],
+      notes: apiPost.notes,
+       diveTimestamp: new Date(apiPost.created_at),
+    },
+    likes: Array.from({ length: apiPost.likes_count || 0 }, (_, i) => ({
+      userId: `user-${i}`, // Placeholder - in real app we'd get actual like data
+      createdAt: new Date(),
+    })),
+    comments: Array.from({ length: apiPost.comments_count || 0 }, (_, i) => ({
+      id: `comment-${i}`,
+      userId: `user-${i}`,
+      content: `Comment ${i}`,
+      createdAt: new Date(),
+    })),
+    createdAt: new Date(apiPost.created_at),
+  };
+};
 
 // Mock data for demonstration
 const mockPosts = [
@@ -226,21 +299,126 @@ const mockPosts = [
 
 export default function FeedScreen() {
   const colorScheme = useColorScheme();
+  const { user } = useUser();
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [selectedPost, setSelectedPost] = useState<DivePost | null>(null);
   const [showDetailedPost, setShowDetailedPost] = useState(false);
+  const [posts, setPosts] = useState<DivePost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Comment modal state
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<DivePost | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
+  
   const colors = Colors[colorScheme ?? 'light'];
 
-  const toggleLike = (postId: string) => {
+  // Load feed data on component mount
+  useEffect(() => {
+    loadFeedData();
+  }, []);
+
+  const loadFeedData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Loading feed data...');
+      
+      // Get feed data from API
+      const feedData = await divePostsService.getFeed();
+      console.log('Feed data loaded:', feedData);
+      
+      // Transform API data to frontend format
+      const transformedPosts = feedData.data.map(transformApiPost);
+      
+      // If no real posts, fall back to mock data for demo
+      if (transformedPosts.length === 0) {
+        console.log('No real posts found, using mock data');
+        setPosts(mockPosts);
+      } else {
+        console.log('Using real posts:', transformedPosts.length);
+        setPosts(transformedPosts);
+      }
+      
+    } catch (err) {
+      console.error('Failed to load feed data:', err);
+      setError('Failed to load posts');
+      // Fallback to mock data if API fails
+      setPosts(mockPosts);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleLike = async (postId: string) => {
+    // Must be logged in to like posts
+    if (!user?.id) {
+      Alert.alert('Login Required', 'Please log in to like posts');
+      return;
+    }
+
+    const isCurrentlyLiked = likedPosts.has(postId);
+    
+    // Optimistic update - update UI immediately
     setLikedPosts(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(postId)) {
+      if (isCurrentlyLiked) {
         newSet.delete(postId);
       } else {
         newSet.add(postId);
       }
       return newSet;
     });
+
+    // Update like count in posts immediately
+    setPosts(prev => prev.map(post => 
+      post.id === postId 
+        ? { ...post, likes: isCurrentlyLiked 
+            ? post.likes.filter(like => like.userId !== user.id)
+            : [...post.likes, { userId: user.id, createdAt: new Date() }] 
+          }
+        : post
+    ));
+
+    try {
+      // Make API call
+      if (isCurrentlyLiked) {
+        await divePostsService.unlikePost(postId, user.id);
+        console.log('✅ Post unliked successfully');
+      } else {
+        await divePostsService.likePost(postId, user.id);
+        console.log('✅ Post liked successfully');
+      }
+    } catch (error: any) {
+      // Revert optimistic update on error
+      console.error('Failed to toggle like:', error);
+      
+      setLikedPosts(prev => {
+        const newSet = new Set(prev);
+        if (isCurrentlyLiked) {
+          newSet.add(postId); // Re-add the like
+        } else {
+          newSet.delete(postId); // Remove the like
+        }
+        return newSet;
+      });
+
+      // Revert like count in posts
+      setPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, likes: isCurrentlyLiked 
+              ? [...post.likes, { userId: user.id, createdAt: new Date() }]
+              : post.likes.filter(like => like.userId !== user.id)
+            }
+          : post
+      ));
+
+      Alert.alert('Error', 'Failed to update like. Please try again.');
+    }
   };
 
   const handlePostPress = (post: DivePost) => {
@@ -253,12 +431,79 @@ export default function FeedScreen() {
     setSelectedPost(null);
   };
 
-  const handleComment = () => {
-    // TODO: Implement comment functionality
+  const handleComment = async (post: DivePost) => {
+    if (!user?.id) {
+      Alert.alert('Login Required', 'Please log in to view and add comments');
+      return;
+    }
+
+    setSelectedPostForComments(post);
+    setShowCommentModal(true);
+    
+    // Load comments for this post
+    await loadComments(post.id);
   };
 
-  const handleShare = () => {
-    // TODO: Implement share functionality
+  const loadComments = async (postId: string) => {
+    try {
+      setLoadingComments(true);
+      const response = await divePostsService.getComments(postId);
+      setComments(response.data);
+    } catch (error: any) {
+      console.error('Failed to load comments:', error);
+      Alert.alert('Error', 'Failed to load comments');
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!user?.id || !selectedPostForComments || !commentText.trim()) {
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      await divePostsService.createComment(selectedPostForComments.id, user.id, commentText.trim());
+      
+      // Clear comment text
+      setCommentText('');
+      
+      // Reload comments
+      await loadComments(selectedPostForComments.id);
+      
+      // Update the post's comment count in the UI
+      setPosts(prev => prev.map(post => 
+        post.id === selectedPostForComments.id 
+          ? { ...post, comments: [...post.comments, { userId: user.id, createdAt: new Date() }] }
+          : post
+      ));
+      
+    } catch (error: any) {
+      console.error('Failed to submit comment:', error);
+      Alert.alert('Error', 'Failed to add comment. Please try again.');
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const closeCommentModal = () => {
+    setShowCommentModal(false);
+    setSelectedPostForComments(null);
+    setComments([]);
+    setCommentText('');
+  };
+
+  const handleShare = async (post: DivePost) => {
+    try {
+      const success = await shareService.shareDivePost(post);
+      if (success) {
+        console.log('Post shared successfully!');
+        // Optionally add an analytics event here
+      }
+    } catch (error) {
+      console.error('Failed to share post:', error);
+    }
   };
 
   return (
@@ -279,14 +524,31 @@ export default function FeedScreen() {
         </ThemedView>
       </ThemedView>
 
-      {mockPosts.map((post) => (
+      {/* Loading state */}
+      {loading && (
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText style={styles.loadingText}>Loading dive posts...</ThemedText>
+        </ThemedView>
+      )}
+
+      {/* Error state */}
+      {error && !loading && (
+        <ThemedView style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>⚠️ {error}</ThemedText>
+          <ThemedText style={styles.errorSubText}>Showing sample posts for now</ThemedText>
+        </ThemedView>
+      )}
+
+      {/* Posts */}
+      {!loading && posts.map((post) => (
         <CompactDiveCard
           key={post.id}
           post={post}
           isLiked={likedPosts.has(post.id)}
           onLike={() => toggleLike(post.id)}
-          onComment={handleComment}
-          onShare={handleShare}
+          onComment={() => handleComment(post)}
+          onShare={() => handleShare(post)}
           onPress={() => handlePostPress(post)}
         />
       ))}
@@ -299,8 +561,8 @@ export default function FeedScreen() {
           isLiked={likedPosts.has(selectedPost.id)}
           onClose={handleCloseDetailedPost}
           onLike={() => toggleLike(selectedPost.id)}
-          onComment={handleComment}
-          onShare={handleShare}
+          onComment={() => selectedPost && handleComment(selectedPost)}
+          onShare={() => selectedPost && handleShare(selectedPost)}
         />
       )}
 
@@ -309,6 +571,103 @@ export default function FeedScreen() {
           🌊 You&apos;re all caught up! Time for another dive? 🤿
         </ThemedText>
       </ThemedView>
+
+      {/* Comment Modal */}
+      <Modal
+        visible={showCommentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeCommentModal}
+      >
+        <KeyboardAvoidingView 
+          style={[styles.commentModal, { backgroundColor: colors.background }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          {/* Modal Header */}
+          <View style={[styles.commentHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={closeCommentModal} style={styles.closeButton}>
+              <ThemedText style={[styles.closeButtonText, { color: colors.primary }]}>Cancel</ThemedText>
+            </TouchableOpacity>
+            <ThemedText style={[styles.commentTitle, { color: colors.text }]}>Comments</ThemedText>
+            <View style={styles.closeButton} />
+          </View>
+
+          {/* Comments List */}
+          <View style={styles.commentsContainer}>
+            {loadingComments ? (
+              <View style={styles.loadingComments}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <ThemedText style={[styles.loadingText, { color: colors.text }]}>Loading comments...</ThemedText>
+              </View>
+            ) : comments.length === 0 ? (
+              <View style={styles.noComments}>
+                <ThemedText style={[styles.noCommentsText, { color: colors.text }]}>
+                  💬 Be the first to comment on this dive!
+                </ThemedText>
+              </View>
+            ) : (
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item: comment }) => (
+                  <View style={[styles.commentItem, { borderBottomColor: colors.border }]}>
+                    <View style={styles.commentContent}>
+                      <ThemedText style={[styles.commentUser, { color: colors.primary }]}>
+                        User #{comment.user_id.slice(-4)}
+                      </ThemedText>
+                      <ThemedText style={[styles.commentText, { color: colors.text }]}>
+                        {comment.content}
+                      </ThemedText>
+                      <ThemedText style={[styles.commentTime, { color: colors.text }]}>
+                        {format(new Date(comment.created_at), 'MMM d, h:mm a')}
+                      </ThemedText>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+
+          {/* Add Comment Input */}
+          <View style={[
+            styles.commentInputContainer, 
+            { 
+              borderTopColor: colors.border, 
+              backgroundColor: colors.background,
+              paddingBottom: 80, // Extra padding for Android
+            }
+          ]}>
+            <TextInput
+              style={[styles.commentInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="Add a comment..."
+              placeholderTextColor={colors.text + '80'}
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity 
+              style={[
+                styles.sendButton, 
+                { 
+                  backgroundColor: commentText.trim() ? colors.primary : colors.border,
+                  opacity: submittingComment ? 0.7 : 1
+                }
+              ]}
+              onPress={submitComment}
+              disabled={!commentText.trim() || submittingComment}
+            >
+              {submittingComment ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <ThemedText style={styles.sendButtonText}>Post</ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -382,6 +741,134 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     opacity: 0.6,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+    margin: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ff4444',
+    textAlign: 'center',
+  },
+  errorSubText: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  // Comment Modal Styles
+  commentModal: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  closeButton: {
+    width: 60,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  commentTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  commentsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  loadingComments: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noComments: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  commentItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  commentContent: {
+    flex: 1,
+  },
+  commentUser: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  commentText: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  commentTime: {
+    fontSize: 12,
+    opacity: 0.6,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    minHeight: 70,
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginRight: 12,
+    maxHeight: 100,
+    minHeight: 44,
+    fontSize: 16,
+    textAlignVertical: 'center',
+  },
+  sendButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    minWidth: 50,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 
