@@ -35,6 +35,8 @@ function RootLayoutInner() {
     );
   }
 
+  console.log('✅ User found, showing main app:', user.email);
+
   // Show main app with expo-router navigation if user is authenticated
   return (
     <Stack>

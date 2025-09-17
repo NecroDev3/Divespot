@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '@/constants/Api';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { googleAuthService, GoogleUser } from './googleAuthService';
 
 // Simple types for auth
 export interface AuthUser {
@@ -177,21 +178,83 @@ class AuthService {
     }
   }
 
-  // Google Auth (mock for now)
+  // Real Google authentication
   async googleAuth(): Promise<AuthUser> {
     try {
-      const googleUser = await this.signup({
-        email: `demo.user.${Date.now()}@gmail.com`,
-        password: 'demo123',
-        displayName: 'Demo Google User',
-        location: 'Cape Town, South Africa',
-        certificationLevel: 'Advanced Open Water',
-      });
+      console.log('🔐 Starting Google authentication...');
       
-      return googleUser;
-    } catch (error: any) {
-      console.error('Google auth failed:', error);
-      throw new Error('Google authentication failed');
+      // Use the real Google Auth service
+      const googleUser: GoogleUser = await googleAuthService.signIn();
+      console.log('✅ Google sign-in successful:', googleUser.email);
+
+      // Try to authenticate with backend first
+      try {
+        // Check if backend is available
+        await this.checkHealth();
+        
+        // Try to get existing user or create new one via backend
+        const backendUser = await this.getOrCreateGoogleUser(googleUser);
+        await this.saveUser(backendUser);
+        return backendUser;
+        
+      } catch (backendError) {
+        console.warn('Backend unavailable, creating user locally for demo:', backendError);
+        
+        // Fallback: Create local user from Google data
+        const localUser: AuthUser = {
+          id: `google-${googleUser.id}`,
+          username: googleUser.email.split('@')[0],
+          email: googleUser.email,
+          displayName: googleUser.name,
+          bio: 'Signed in with Google',
+          profileImageUrl: googleUser.photo || 'https://via.placeholder.com/150',
+          location: 'Cape Town, South Africa',
+          totalDives: 0,
+          maxDepthAchieved: 0,
+          totalBottomTime: 0,
+          certificationLevel: 'Open Water',
+          createdAt: new Date().toISOString(),
+        };
+
+        await this.saveUser(localUser);
+        return localUser;
+      }
+      
+    } catch (error) {
+      console.error('Google auth error:', error);
+      throw new Error(error instanceof Error ? error.message : 'Google authentication failed');
+    }
+  }
+
+  // Helper method to get or create user via backend
+  private async getOrCreateGoogleUser(googleUser: GoogleUser): Promise<AuthUser> {
+    try {
+      // Try to get existing user by email
+      const response = await fetch(`${this.baseUrl}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          google_id: googleUser.id,
+          email: googleUser.email,
+          display_name: googleUser.name,
+          profile_image_url: googleUser.photo,
+          given_name: googleUser.givenName,
+          family_name: googleUser.familyName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend auth failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.user;
+      
+    } catch (error) {
+      console.error('Backend Google auth failed:', error);
+      throw error;
     }
   }
 

@@ -94,7 +94,10 @@ export function UserProvider({ children }: UserProviderProps) {
       
       const authUser = await authService.login({ email, password });
       const user = transformAuthUser(authUser);
+      
+      // Set user state to trigger navigation to dashboard
       setUserState(user);
+      console.log('✅ Login successful, navigating to dashboard...');
       
     } catch (error) {
       console.error('Login failed:', error);
@@ -116,7 +119,10 @@ export function UserProvider({ children }: UserProviderProps) {
         certificationLevel: 'Open Water'
       });
       const user = transformAuthUser(authUser);
+      
+      // Set user state to trigger navigation to dashboard
       setUserState(user);
+      console.log('✅ Signup successful, navigating to dashboard...');
       
     } catch (error) {
       console.error('Signup failed:', error);
@@ -132,9 +138,17 @@ export function UserProvider({ children }: UserProviderProps) {
       
       const authUser = await authService.googleAuth();
       const user = transformAuthUser(authUser);
+      
+      // Set user state first to trigger navigation
       setUserState(user);
       
-      Alert.alert('Success', 'Signed in with Google! (Demo)');
+      // Brief success message, then let navigation happen
+      console.log('✅ Google sign-in successful, navigating to dashboard...');
+      
+      // Optional: Show a brief toast instead of blocking alert
+      setTimeout(() => {
+        console.log(`Welcome ${user.displayName}! Signed in with Google.`);
+      }, 100);
       
     } catch (error) {
       console.error('Google auth failed:', error);
