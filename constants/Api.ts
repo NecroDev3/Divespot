@@ -1,18 +1,36 @@
 // API Configuration Constants
+import { Platform } from 'react-native';
 
 // Environment detection
 export const isDevelopment = __DEV__;
 export const isProduction = !__DEV__;
 
+// Platform-specific base URLs
+const getBaseUrl = () => {
+  if (!isDevelopment) return 'https://your-production-api.com';
+  
+  // For development, use localhost for web and network IP for mobile
+  return Platform.OS === 'web' ? 'http://localhost:8000' : 'http://192.168.50.79:8000';
+};
+
+const getImageUrl = () => {
+  if (!isDevelopment) return 'https://your-production-api.com';
+  
+  // For development, use localhost for web and network IP for mobile
+  return Platform.OS === 'web' ? 'http://localhost:5010' : 'http://192.168.50.79:5010';
+};
+
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
   BASE_URL: isDevelopment 
-    ? 'http://192.168.50.83:8000/api'  // Network IP for mobile access
-    : 'https://your-production-api.com/api', // Replace with your production API URL
+    ? `${getBaseUrl()}/api`
+    : 'https://your-production-api.com/api',
+    
+  IMAGE_URL: getImageUrl(),
     
   HEALTH_ENDPOINT: isDevelopment
-    ? 'http://192.168.50.83:8000/'
+    ? `${getBaseUrl()}/`
     : 'https://your-production-api.com/',
     
   // Timeouts (in milliseconds)

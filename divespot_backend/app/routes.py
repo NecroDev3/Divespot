@@ -173,6 +173,43 @@ def delete_user(user_id):
 @api_bp.route("/spots", methods=["POST"])
 def create_spot():
     data = request.get_json(force=True)
+    
+    # Check if the user exists, if not create a system user or use fallback
+    created_by_user_id = data.get("created_by", "system")
+    user_exists = User.query.filter_by(id=created_by_user_id).first()
+    
+    if not user_exists and created_by_user_id != "system":
+        # Create a basic user record for Google OAuth users
+        try:
+            new_user = User(
+                id=created_by_user_id,
+                username=f"user_{created_by_user_id[:8]}",
+                email=f"{created_by_user_id}@google.oauth",
+                display_name="Google User",
+                location="Unknown",
+                certification_level="Open Water"
+            )
+            db.session.add(new_user)
+            db.session.flush()  # Flush to get the user created before creating the spot
+        except Exception as e:
+            print(f"Failed to create user, using system fallback: {e}")
+            created_by_user_id = "system"
+    
+    # Create a system user if it doesn't exist
+    if created_by_user_id == "system":
+        system_user = User.query.filter_by(id="system").first()
+        if not system_user:
+            system_user = User(
+                id="system",
+                username="system",
+                email="system@divespot.app",
+                display_name="System",
+                location="System",
+                certification_level="Instructor"
+            )
+            db.session.add(system_user)
+            db.session.flush()
+    
     spot = DiveSpot(
         name=data["name"],
         description=data.get("description"),
@@ -184,7 +221,7 @@ def create_spot():
         water_type=data.get("water_type", "Salt"),
         avg_visibility=data.get("avg_visibility"),
         avg_temperature=data.get("avg_temperature"),
-        created_by=data["created_by"],
+        created_by=created_by_user_id,
     )
     db.session.add(spot)
     db.session.commit()

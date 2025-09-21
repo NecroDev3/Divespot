@@ -7,11 +7,11 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useUser } from '@/contexts/UserContext';
 import { CAPE_TOWN_DIVE_SPOTS } from '@/types';
 import { divePostsService, CreateDivePostData } from '@/services/divePostsService';
+import { imageService } from '@/services/imageService';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, Text } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 
 interface DiveLocation {
@@ -24,23 +24,25 @@ interface DiveLocation {
 export default function AddPostScreen() {
   const router = useRouter();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [diveLocation, setDiveLocation] = useState<DiveLocation | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [showPopularSpots, setShowPopularSpots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   
-  // Dive details form data
-  const [formData, setFormData] = useState({
-    caption: '',
+  // Simplified form data - only essentials
+  const [caption, setCaption] = useState('');
+  
+  // Optional details (hidden by default)
+  const [optionalDetails, setOptionalDetails] = useState({
     maxDepth: '',
     diveDuration: '',
     visibilityQuality: 'Good' as CreateDivePostData['visibility_quality'],
     waterTemp: '',
-    windConditions: 'Light' as CreateDivePostData['wind_conditions'],
-    currentConditions: 'Light' as CreateDivePostData['current_conditions'],
     seaLife: '',
     buddyNames: '',
-    equipment: '',
     notes: '',
   });
   
@@ -56,7 +58,7 @@ export default function AddPostScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.8,
       selectionLimit: 5,
@@ -64,7 +66,9 @@ export default function AddPostScreen() {
 
     if (!result.canceled) {
       const uris = result.assets.map(asset => asset.uri);
-      setSelectedImages(prev => [...prev, ...uris].slice(0, 5));
+      const newImages = [...selectedImages, ...uris].slice(0, 5);
+      setSelectedImages(newImages);
+      await uploadImages(uris);
     }
   };
 
@@ -81,42 +85,37 @@ export default function AddPostScreen() {
     });
 
     if (!result.canceled) {
-      setSelectedImages(prev => [...prev, result.assets[0].uri].slice(0, 5));
+      const newImages = [...selectedImages, result.assets[0].uri].slice(0, 5);
+      setSelectedImages(newImages);
+      await uploadImages([result.assets[0].uri]);
     }
   };
 
-  const getCurrentLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Location permissions are required to tag dive spots');
-      return;
-    }
+  const uploadImages = async (imageUris: string[]) => {
+    if (imageUris.length === 0) return;
 
     try {
-      const currentLocation = await Location.getCurrentPositionAsync({});
+      setIsUploadingImages(true);
+      console.log('🔄 Uploading images to server...');
       
-      // Auto-set dive location to current location
-      setDiveLocation({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-        address: 'Current Location',
-        name: 'Current Location',
-      });
-    } catch {
-      Alert.alert('Error', 'Could not get current location');
+      const urls = await imageService.uploadMultipleImages(imageUris);
+      setUploadedImageUrls(prev => [...prev, ...urls]);
+      
+      console.log(' Images uploaded successfully:', urls);
+    } catch (error) {
+      console.error(' Image upload failed:', error);
+      Alert.alert('Upload Failed', 'Failed to upload images. They will be stored locally.');
+    } finally {
+      setIsUploadingImages(false);
     }
   };
 
-  const handleLocationSelect = (selectedLocation: DiveLocation) => {
-    setDiveLocation(selectedLocation);
-    setShowMapPicker(false);
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setUploadedImageUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleMapPickerToggle = () => {
-    setShowMapPicker(!showMapPicker);
-  };
-
-  const handlePopularSpotSelect = (spot: typeof CAPE_TOWN_DIVE_SPOTS[0]) => {
+  const handlePopularSpotSelect = (spot: any) => {
     setDiveLocation({
       latitude: spot.coordinates.latitude,
       longitude: spot.coordinates.longitude,
@@ -132,14 +131,14 @@ export default function AddPostScreen() {
       return;
     }
 
-    // Validation
-    if (!formData.maxDepth || !formData.diveDuration) {
-      Alert.alert('Error', 'Depth and duration are required');
+    // Minimal validation - only require caption and location
+    if (!caption.trim()) {
+      Alert.alert('Error', 'Please add a caption to share your dive experience');
       return;
     }
 
     if (!diveLocation) {
-      Alert.alert('Error', 'Please select a dive location');
+      Alert.alert('Error', 'Please select where you dove');
       return;
     }
 
@@ -160,52 +159,58 @@ export default function AddPostScreen() {
         user_id: user.id,
         dive_spot_id: diveSpotId,
         dive_date: divePostsService.formatDateForAPI(new Date()),
-        max_depth: parseInt(formData.maxDepth),
-        dive_duration: parseInt(formData.diveDuration),
-        visibility_quality: formData.visibilityQuality,
-        wind_conditions: formData.windConditions,
-        current_conditions: formData.currentConditions,
-        caption: formData.caption || undefined,
-        image_urls: selectedImages,
-        water_temp: formData.waterTemp ? parseInt(formData.waterTemp) : undefined,
-        sea_life: formData.seaLife ? formData.seaLife.split(',').map(s => s.trim()) : undefined,
-        buddy_names: formData.buddyNames ? formData.buddyNames.split(',').map(s => s.trim()) : undefined,
-        equipment: formData.equipment ? formData.equipment.split(',').map(s => s.trim()) : undefined,
-        notes: formData.notes || undefined,
+        // Use defaults for required fields if not provided
+        max_depth: optionalDetails.maxDepth ? parseInt(optionalDetails.maxDepth) : 10,
+        dive_duration: optionalDetails.diveDuration ? parseInt(optionalDetails.diveDuration) : 30,
+        visibility_quality: optionalDetails.visibilityQuality,
+        wind_conditions: 'Light', // Default
+        current_conditions: 'Light', // Default
+        caption: caption.trim(),
+        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : selectedImages,
+        water_temp: optionalDetails.waterTemp ? parseInt(optionalDetails.waterTemp) : undefined,
+        sea_life: optionalDetails.seaLife ? optionalDetails.seaLife.split(',').map(s => s.trim()) : undefined,
+        buddy_names: optionalDetails.buddyNames ? optionalDetails.buddyNames.split(',').map(s => s.trim()) : undefined,
+        equipment: undefined, // Not needed for simple posts
+        notes: optionalDetails.notes || undefined,
         dive_timestamp: new Date().toISOString(),
       };
 
       const createdPost = await divePostsService.createDivePost(postData);
       
       // Clear form data immediately
-      setFormData({
-        caption: '',
+      setCaption('');
+      setOptionalDetails({
         maxDepth: '',
         diveDuration: '',
         visibilityQuality: 'Good',
         waterTemp: '',
-        windConditions: 'Light',
-        currentConditions: 'Light',
         seaLife: '',
         buddyNames: '',
-        equipment: '',
         notes: '',
       });
       setSelectedImages([]);
+      setUploadedImageUrls([]);
       setDiveLocation(null);
-      
-      // Show success message and navigate to feed
-      Alert.alert('Success!', 'Your dive has been shared! 🌊', [
-        { 
-          text: 'View in Feed', 
-          onPress: () => {
-            router.push('/');
+      setShowDetails(false);
+
+      Alert.alert(
+        'Success!', 
+        'Your dive has been shared with the community!',
+        [
+          {
+            text: 'View Feed',
+            onPress: () => router.push('/(tabs)/')
+          },
+          {
+            text: 'Add Another',
+            style: 'cancel'
           }
-        }
-      ]);
+        ]
+      );
 
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create dive post');
+      console.error('Failed to create post:', error);
+      Alert.alert('Error', error.message || 'Failed to create post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -213,129 +218,311 @@ export default function AddPostScreen() {
 
   return (
     <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]} 
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      <ThemedView style={[styles.header, { backgroundColor: colors.surface }]}>
-        <ThemedText type="title" style={{ color: colors.primary }}>Share Your Dive</ThemedText>
-        <ThemedText style={[styles.subtitle, { color: colors.secondary }]}>
-          Document your underwater adventure 🤿
+      {/* Header */}
+      <ThemedView style={[styles.header, { backgroundColor: colors.primary + '15' }]}>
+        <ThemedText type="title" style={{ color: colors.primary }}>
+          Share Your Dive 🤿
+        </ThemedText>
+        <ThemedText style={[styles.subtitle, { color: colors.text }]}>
+          Quick and easy dive sharing
         </ThemedText>
       </ThemedView>
 
+      {/* Photos Section */}
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Photos</ThemedText>
+        <ThemedView style={styles.sectionHeader}>
+          <ThemedView style={[styles.sectionIcon, { backgroundColor: colors.like + '20' }]}>
+            <ThemedText style={styles.sectionEmoji}>📸</ThemedText>
+          </ThemedView>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: colors.text }]}>
+            Photos (Optional)
+          </ThemedText>
+        </ThemedView>
+        
         <ThemedView style={styles.imageContainer}>
           {selectedImages.map((uri, index) => (
-            <Image
-              key={index}
-              source={{ uri }}
-              style={styles.selectedImage}
-            />
+            <ThemedView key={index} style={styles.imageWrapper}>
+              <Image
+                source={{ uri }}
+                style={styles.selectedImage}
+              />
+              <TouchableOpacity 
+                style={[styles.removeImageButton, { backgroundColor: colors.error }]} 
+                onPress={() => removeImage(index)}
+              >
+                <IconSymbol name="xmark" size={12} color="white" />
+              </TouchableOpacity>
+              {isUploadingImages && (
+                <ThemedView style={styles.uploadingOverlay}>
+                  <ActivityIndicator color="white" />
+                </ThemedView>
+              )}
+            </ThemedView>
           ))}
+          
           {selectedImages.length < 5 && (
             <ThemedView style={styles.addImageContainer}>
-              <TouchableOpacity style={[styles.imageButton, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={pickImage}>
-                <IconSymbol name="photo" size={30} color={colors.primary} />
-                <ThemedText style={[styles.buttonText, { color: colors.text }]}>Gallery</ThemedText>
+              <TouchableOpacity
+                style={[styles.imageButton, { borderColor: colors.like, backgroundColor: colors.like + '10' }]}
+                onPress={pickImage}
+              >
+                <IconSymbol name="photo" size={24} color={colors.like} />
+                <ThemedText style={[styles.buttonText, { color: colors.like }]}>
+                  Gallery
+                </ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.imageButton, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={takePhoto}>
-                <IconSymbol name="camera" size={30} color={colors.primary} />
-                <ThemedText style={[styles.buttonText, { color: colors.text }]}>Camera</ThemedText>
+              
+              <TouchableOpacity
+                style={[styles.imageButton, { borderColor: colors.share, backgroundColor: colors.share + '10' }]}
+                onPress={takePhoto}
+              >
+                <IconSymbol name="camera" size={24} color={colors.share} />
+                <ThemedText style={[styles.buttonText, { color: colors.share }]}>
+                  Camera
+                </ThemedText>
               </TouchableOpacity>
             </ThemedView>
           )}
         </ThemedView>
       </ThemedView>
 
+      {/* Caption Section */}
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Dive Location</ThemedText>
-        
-        <ThemedView style={styles.locationButtons}>
-          <TouchableOpacity 
-            style={[styles.locationButton, { 
-              borderColor: colors.like, 
-              backgroundColor: colors.like,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.15,
-              shadowRadius: 4,
-              elevation: 3,
-            }]} 
-            onPress={() => setShowPopularSpots(true)}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="mappin.and.ellipse" size={24} color="white" />
-            <ThemedText style={[styles.locationButtonText, { color: 'white' }]}>
-              Location
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.locationButton, { 
-              borderColor: colors.primary, 
-              backgroundColor: colors.primary,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.15,
-              shadowRadius: 4,
-              elevation: 3,
-            }]} 
-            onPress={handleMapPickerToggle}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="map" size={24} color="white" />
-            <ThemedText style={[styles.locationButtonText, { color: 'white' }]}>
-              Map
-            </ThemedText>
-          </TouchableOpacity>
+        <ThemedView style={styles.sectionHeader}>
+          <ThemedView style={[styles.sectionIcon, { backgroundColor: colors.comment + '20' }]}>
+            <ThemedText style={styles.sectionEmoji}>💬</ThemedText>
+          </ThemedView>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: colors.text }]}>
+            What happened on your dive? *
+          </ThemedText>
         </ThemedView>
+        
+        <TextInput
+          style={[
+            styles.textInput,
+            styles.textArea,
+            { 
+              borderColor: colors.border, 
+              backgroundColor: colors.surface,
+              color: colors.text 
+            }
+          ]}
+          placeholder="Amazing dive at Seal Island! Saw some incredible sea life..."
+          placeholderTextColor={colors.text + '60'}
+          value={caption}
+          onChangeText={setCaption}
+          multiline
+          maxLength={500}
+        />
+      </ThemedView>
 
-        {/* Selected Location Display */}
-        {diveLocation && (
-          <ThemedView style={[styles.selectedLocationCard, { backgroundColor: colors.overlay, borderColor: colors.border }]}>
-            <IconSymbol name="mappin.circle" size={20} color={colors.success} />
-            <ThemedView style={styles.locationDetails}>
-              <ThemedText style={[styles.selectedLocationName, { color: colors.text }]}>
+      {/* Location Section */}
+      <ThemedView style={styles.section}>
+        <ThemedView style={styles.sectionHeader}>
+          <ThemedView style={[styles.sectionIcon, { backgroundColor: colors.share + '20' }]}>
+            <ThemedText style={styles.sectionEmoji}>📍</ThemedText>
+          </ThemedView>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: colors.text }]}>
+            Where did you dive? *
+          </ThemedText>
+        </ThemedView>
+        
+        {diveLocation ? (
+          <TouchableOpacity
+            style={[styles.selectedLocation, { backgroundColor: colors.surface, borderColor: colors.primary }]}
+            onPress={() => setShowMapPicker(true)}
+          >
+            <IconSymbol name="location" size={20} color={colors.primary} />
+            <ThemedView style={{ flex: 1 }}>
+              <ThemedText style={[styles.locationName, { color: colors.text }]}>
                 {diveLocation.name || 'Selected Location'}
               </ThemedText>
-              <ThemedText style={[styles.selectedLocationCoords, { color: colors.text }]}>
-                📍 {diveLocation.latitude.toFixed(4)}, {diveLocation.longitude.toFixed(4)}
-              </ThemedText>
+              {diveLocation.address && (
+                <ThemedText style={[styles.locationAddress, { color: colors.text }]}>
+                  {diveLocation.address}
+                </ThemedText>
+              )}
             </ThemedView>
-            <TouchableOpacity onPress={() => setDiveLocation(null)}>
-              <IconSymbol name="xmark.circle" size={20} color={colors.error} />
+            <IconSymbol name="pencil" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        ) : (
+          <ThemedView style={styles.locationButtons}>
+            <TouchableOpacity
+              style={[styles.locationButton, { backgroundColor: colors.like }]}
+              onPress={() => setShowPopularSpots(true)}
+            >
+              <IconSymbol name="star" size={20} color="white" />
+              <ThemedText style={styles.locationButtonText}>Popular Spots</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.locationButton, { backgroundColor: colors.comment + '15', borderColor: colors.comment, borderWidth: 1 }]}
+              onPress={() => setShowMapPicker(true)}
+            >
+              <IconSymbol name="location" size={20} color={colors.comment} />
+              <ThemedText style={[styles.locationButtonText, { color: colors.comment }]}>
+                Choose on Map
+              </ThemedText>
             </TouchableOpacity>
           </ThemedView>
-        )}
-
-        {/* Map Location Picker */}
-        {showMapPicker && (
-          <MapLocationPicker
-            onLocationSelect={handleLocationSelect}
-            initialLocation={diveLocation ?? undefined}
-          />
         )}
       </ThemedView>
 
-      {/* Popular Cape Town Dive Spots Modal */}
-      <Modal
-        visible={showPopularSpots}
-        animationType="slide"
-        presentationStyle="pageSheet"
+      {/* Optional Details Toggle */}
+      <ThemedView style={styles.section}>
+        <TouchableOpacity
+          style={[styles.detailsToggle, { backgroundColor: colors.share + '10', borderColor: colors.share }]}
+          onPress={() => setShowDetails(!showDetails)}
+        >
+          <IconSymbol 
+            name={showDetails ? "chevron.down" : "chevron.right"} 
+            size={16} 
+            color={colors.share} 
+          />
+          <ThemedText style={[styles.detailsToggleText, { color: colors.text }]}>
+            Add dive details (optional)
+          </ThemedText>
+          <ThemedText style={[styles.detailsHint, { color: colors.share }]}>
+            Depth, duration, conditions...
+          </ThemedText>
+        </TouchableOpacity>
+
+        {showDetails && (
+          <ThemedView style={styles.detailsContainer}>
+            <ThemedView style={styles.rowContainer}>
+              <ThemedView style={styles.halfWidth}>
+                <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                  Max Depth (m)
+                </ThemedText>
+                <TextInput
+                  style={[styles.textInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
+                  placeholder="e.g. 18"
+                  placeholderTextColor={colors.text + '60'}
+                  value={optionalDetails.maxDepth}
+                  onChangeText={(text) => setOptionalDetails(prev => ({ ...prev, maxDepth: text }))}
+                  keyboardType="numeric"
+                />
+              </ThemedView>
+              
+              <ThemedView style={styles.halfWidth}>
+                <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                  Duration (min)
+                </ThemedText>
+                <TextInput
+                  style={[styles.textInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
+                  placeholder="e.g. 45"
+                  placeholderTextColor={colors.text + '60'}
+                  value={optionalDetails.diveDuration}
+                  onChangeText={(text) => setOptionalDetails(prev => ({ ...prev, diveDuration: text }))}
+                  keyboardType="numeric"
+                />
+              </ThemedView>
+            </ThemedView>
+
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                Sea Life Spotted
+              </ThemedText>
+              <TextInput
+                style={[styles.textInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
+                placeholder="e.g. Seals, Stingrays, Kelp Forest"
+                placeholderTextColor={colors.text + '60'}
+                value={optionalDetails.seaLife}
+                onChangeText={(text) => setOptionalDetails(prev => ({ ...prev, seaLife: text }))}
+              />
+            </ThemedView>
+
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                Dive Buddies
+              </ThemedText>
+              <TextInput
+                style={[styles.textInput, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
+                placeholder="e.g. Sarah, Mike"
+                placeholderTextColor={colors.text + '60'}
+                value={optionalDetails.buddyNames}
+                onChangeText={(text) => setOptionalDetails(prev => ({ ...prev, buddyNames: text }))}
+              />
+            </ThemedView>
+
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={[styles.inputLabel, { color: colors.text }]}>
+                Additional Notes
+              </ThemedText>
+              <TextInput
+                style={[styles.textInput, styles.textArea, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }]}
+                placeholder="Any other details about your dive..."
+                placeholderTextColor={colors.text + '60'}
+                value={optionalDetails.notes}
+                onChangeText={(text) => setOptionalDetails(prev => ({ ...prev, notes: text }))}
+                multiline
+                maxLength={300}
+              />
+            </ThemedView>
+          </ThemedView>
+        )}
+      </ThemedView>
+
+      {/* Submit Button */}
+      <TouchableOpacity
+        style={[
+          styles.submitButton,
+          { 
+            backgroundColor: (caption.trim() && diveLocation) ? colors.like : colors.border,
+            opacity: isSubmitting ? 0.7 : 1,
+            shadowColor: (caption.trim() && diveLocation) ? colors.like : 'transparent',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 6,
+          }
+        ]}
+        onPress={handleSubmit}
+        disabled={!caption.trim() || !diveLocation || isSubmitting}
       >
+        {isSubmitting ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <>
+            <IconSymbol name="paperplane" size={20} color="white" />
+            <ThemedText style={styles.submitButtonText}>
+              Share Dive
+            </ThemedText>
+          </>
+        )}
+      </TouchableOpacity>
+
+      {/* Map Picker Modal */}
+      <Modal visible={showMapPicker} animationType="slide" presentationStyle="pageSheet">
+        <MapLocationPicker
+          onLocationSelect={(location) => {
+            setDiveLocation(location);
+            setShowMapPicker(false);
+          }}
+          onCancel={() => setShowMapPicker(false)}
+          initialLocation={diveLocation}
+        />
+      </Modal>
+
+      {/* Popular Spots Modal */}
+      <Modal visible={showPopularSpots} animationType="slide" presentationStyle="pageSheet">
         <ThemedView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <ThemedView style={[styles.modalHeader, { backgroundColor: colors.surface }]}>
-            <ThemedText type="title" style={{ color: colors.primary }}>
-              🌊 Cape Town Locations
+          <ThemedView style={styles.modalHeader}>
+            <ThemedText type="title" style={{ color: colors.text }}>
+              Popular Cape Town Dive Spots
             </ThemedText>
             <TouchableOpacity onPress={() => setShowPopularSpots(false)}>
-              <IconSymbol name="xmark.circle" size={28} color={colors.error} />
+              <IconSymbol name="xmark" size={24} color={colors.text} />
             </TouchableOpacity>
           </ThemedView>
           
-          <ScrollView style={styles.spotsContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.spotsContainer}>
             {CAPE_TOWN_DIVE_SPOTS.map((spot, index) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={index}
                 style={[styles.spotCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => handlePopularSpotSelect(spot)}
@@ -344,11 +531,10 @@ export default function AddPostScreen() {
                   <ThemedText style={[styles.spotName, { color: colors.text }]}>
                     {spot.name}
                   </ThemedText>
-                  <ThemedView style={[styles.difficultyBadge, { 
-                    backgroundColor: spot.difficulty === 'Beginner' ? colors.success : 
-                                   spot.difficulty === 'Intermediate' ? colors.warning : colors.error 
-                  }]}>
-                    <ThemedText style={styles.difficultyText}>{spot.difficulty}</ThemedText>
+                  <ThemedView style={[styles.difficultyBadge, { backgroundColor: colors.primary }]}>
+                    <ThemedText style={styles.difficultyText}>
+                      {spot.difficulty}
+                    </ThemedText>
                   </ThemedView>
                 </ThemedView>
                 
@@ -358,19 +544,19 @@ export default function AddPostScreen() {
                 
                 <ThemedView style={styles.spotDetails}>
                   <ThemedView style={styles.spotDetailItem}>
-                    <IconSymbol name="arrow.down" size={16} color={colors.primary} />
+                    <IconSymbol name="arrow.down" size={12} color={colors.primary} />
                     <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
-                      Max {spot.maxDepth}m
+                      {spot.maxDepth}m
                     </ThemedText>
                   </ThemedView>
                   <ThemedView style={styles.spotDetailItem}>
-                    <IconSymbol name="eye" size={16} color={colors.primary} />
+                    <IconSymbol name="eye" size={12} color={colors.primary} />
                     <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
-                      {spot.visibility}m visibility
+                      {spot.visibility}m
                     </ThemedText>
                   </ThemedView>
                   <ThemedView style={styles.spotDetailItem}>
-                    <IconSymbol name="thermometer" size={16} color={colors.primary} />
+                    <IconSymbol name="thermometer" size={12} color={colors.primary} />
                     <ThemedText style={[styles.spotDetailText, { color: colors.text }]}>
                       {spot.temperature}°C
                     </ThemedText>
@@ -381,154 +567,6 @@ export default function AddPostScreen() {
           </ScrollView>
         </ThemedView>
       </Modal>
-
-      <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Dive Details</ThemedText>
-        
-        {/* Caption */}
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Caption</ThemedText>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder="Share your dive experience..."
-            placeholderTextColor={colors.text + '60'}
-            value={formData.caption}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, caption: text }))}
-            multiline
-          />
-        </ThemedView>
-
-        {/* Depth and Duration */}
-        <ThemedView style={styles.rowContainer}>
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Max Depth (m) *</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="18"
-              placeholderTextColor={colors.text + '60'}
-              value={formData.maxDepth}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, maxDepth: text }))}
-              keyboardType="numeric"
-            />
-          </ThemedView>
-          
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Duration (min) *</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="45"
-              placeholderTextColor={colors.text + '60'}
-              value={formData.diveDuration}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, diveDuration: text }))}
-              keyboardType="numeric"
-            />
-          </ThemedView>
-        </ThemedView>
-
-        {/* Visibility and Water Temperature */}
-        <ThemedView style={styles.rowContainer}>
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Visibility *</ThemedText>
-            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.visibilityQuality}</Text>
-              {/* Note: For MVP, we'll use text display. In production, add proper picker */}
-            </ThemedView>
-          </ThemedView>
-          
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Water Temp (°C)</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="16"
-              placeholderTextColor={colors.text + '60'}
-              value={formData.waterTemp}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, waterTemp: text }))}
-              keyboardType="numeric"
-            />
-          </ThemedView>
-        </ThemedView>
-
-        {/* Wind and Current Conditions */}
-        <ThemedView style={styles.rowContainer}>
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Wind Conditions *</ThemedText>
-            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.windConditions}</Text>
-            </ThemedView>
-          </ThemedView>
-          
-          <ThemedView style={[styles.inputContainer, styles.halfWidth]}>
-            <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Current *</ThemedText>
-            <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.pickerText, { color: colors.text }]}>{formData.currentConditions}</Text>
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
-
-        {/* Sea Life */}
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Sea Life Spotted</ThemedText>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder="Seals, kelp fish, octopus..."
-            placeholderTextColor={colors.text + '60'}
-            value={formData.seaLife}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, seaLife: text }))}
-          />
-        </ThemedView>
-
-        {/* Dive Buddies */}
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Dive Buddies</ThemedText>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder="Alex, Jordan..."
-            placeholderTextColor={colors.text + '60'}
-            value={formData.buddyNames}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, buddyNames: text }))}
-          />
-        </ThemedView>
-
-        {/* Equipment */}
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Equipment Used</ThemedText>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder="5mm wetsuit, camera, dive computer..."
-            placeholderTextColor={colors.text + '60'}
-            value={formData.equipment}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, equipment: text }))}
-          />
-        </ThemedView>
-
-        {/* Notes */}
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={[styles.inputLabel, { color: colors.text }]}>Notes</ThemedText>
-          <TextInput
-            style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder="Additional dive notes..."
-            placeholderTextColor={colors.text + '60'}
-            value={formData.notes}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-            multiline
-            numberOfLines={3}
-          />
-        </ThemedView>
-      </ThemedView>
-
-      <TouchableOpacity 
-        style={[
-          styles.shareButton, 
-          { backgroundColor: colors.primary },
-          isSubmitting && { opacity: 0.7 }
-        ]}
-        onPress={handleSubmit}
-        disabled={isSubmitting}
-      >
-        <ThemedText style={[styles.shareButtonText, { color: 'white' }]}>
-          {isSubmitting ? '🔄 Sharing...' : '🌊 Share Dive'}
-        </ThemedText>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -539,7 +577,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   contentContainer: {
-    paddingBottom: 120, // Extra space for tab bar and visual breathing room
+    paddingBottom: 120,
   },
   header: {
     alignItems: 'center',
@@ -557,14 +595,37 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 30,
   },
-  sectionTitle: {
-    marginBottom: 20,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
     paddingHorizontal: 8,
+    gap: 12,
   },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionEmoji: {
+    fontSize: 18,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
+  
+  // Image styles
   imageContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  imageWrapper: {
+    position: 'relative',
   },
   selectedImage: {
     width: 80,
@@ -576,6 +637,31 @@ const styles = StyleSheet.create({
         height: 60,
       },
     }),
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addImageContainer: {
     flexDirection: 'row',
@@ -594,18 +680,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+
+  // Form styles
+  textInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+
+  // Location styles
   locationButtons: {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 24,
     paddingHorizontal: 8,
-    ...Platform.select({
-      web: {
-        width: '40%',
-        alignSelf: 'center',
-        paddingHorizontal: 0,
-      },
-    }),
   },
   locationButton: {
     flex: 1,
@@ -614,89 +724,93 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 16,
-    borderWidth: 0,
-    gap: 10,
+    borderRadius: 12,
+    gap: 8,
   },
   locationButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: 'white',
   },
-  selectedLocationCard: {
+  selectedLocation: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 20,
-    marginHorizontal: 8,
-    gap: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    gap: 12,
   },
-  locationDetails: {
+  locationName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  locationAddress: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginTop: 2,
+  },
+
+  // Details toggle
+  detailsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+    marginBottom: 16,
+  },
+  detailsToggleText: {
+    fontSize: 16,
+    fontWeight: '600',
     flex: 1,
   },
-  selectedLocationName: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  selectedLocationCoords: {
-    fontSize: 13,
-    opacity: 0.7,
-  },
-  placeholder: {
-    fontStyle: 'italic',
+  detailsHint: {
+    fontSize: 14,
     opacity: 0.6,
-    textAlign: 'center',
-    padding: 20,
   },
-  shareButton: {
-    padding: 18,
-    borderRadius: 12,
+  detailsContainer: {
+    paddingLeft: 16,
+  },
+
+  // Submit button
+  submitButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 60, // Increased bottom margin for better spacing
-    marginHorizontal: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    ...Platform.select({
-      web: {
-        width: '40%',
-        alignSelf: 'center',
-        marginHorizontal: 0,
-      },
-    }),
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 40,
   },
-  shareButtonText: {
-    fontWeight: '600',
+  submitButtonText: {
     fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
   },
-  // Modal Styles
+
+  // Modal styles
   modalContainer: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 50,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: '#E5E5E5',
   },
   spotsContainer: {
-    flex: 1,
-    padding: 16,
+    padding: 20,
   },
   spotCard: {
-    borderRadius: 16,
     padding: 20,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     shadowOffset: { width: 0, height: 2 },
@@ -711,7 +825,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   spotName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
   },
@@ -745,42 +859,5 @@ const styles = StyleSheet.create({
   spotDetailText: {
     fontSize: 12,
     opacity: 0.8,
-  },
-  // Form input styles
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  textInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  rowContainer: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  pickerContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    justifyContent: 'center',
-  },
-  pickerText: {
-    fontSize: 16,
   },
 });

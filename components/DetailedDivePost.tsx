@@ -111,7 +111,12 @@ export const DetailedDivePost: React.FC<DetailedDivePostProps> = ({
 
           {/* Main Title */}
           <ThemedView style={styles.titleSection}>
-            <ThemedText style={[styles.diveTitle, { color: colors.text }]}>
+            <ThemedText 
+              style={[styles.diveTitle, { color: colors.text }]}
+              numberOfLines={0}
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.8}
+            >
               {post.diveSpot.name} Dive
             </ThemedText>
           </ThemedView>
@@ -239,44 +244,46 @@ export const DetailedDivePost: React.FC<DetailedDivePostProps> = ({
             </ThemedView>
           )}
 
-          {/* Social Actions */}
-          <ThemedView style={[styles.socialSection, { backgroundColor: colors.surface }]}>
-            <ThemedView style={styles.socialStats}>
-              <ThemedText style={[styles.socialStatsText, { color: colors.text }]}>
-                {post.likes.length > 0 && `${post.likes.length} ${post.likes.length === 1 ? 'like' : 'likes'}`}
-                {post.likes.length > 0 && post.comments.length > 0 && ' • '}
-                {post.comments.length > 0 && `${post.comments.length} ${post.comments.length === 1 ? 'comment' : 'comments'}`}
-              </ThemedText>
-            </ThemedView>
+          {/* Social Actions - Hidden in detailed view for cleaner look */}
+          {false && (
+            <ThemedView style={[styles.socialSection, { backgroundColor: colors.surface }]}>
+              <ThemedView style={styles.socialStats}>
+                <ThemedText style={[styles.socialStatsText, { color: colors.text }]}>
+                  {post.likes.length > 0 && `${post.likes.length} ${post.likes.length === 1 ? 'like' : 'likes'}`}
+                  {post.likes.length > 0 && post.comments.length > 0 && ' • '}
+                  {post.comments.length > 0 && `${post.comments.length} ${post.comments.length === 1 ? 'comment' : 'comments'}`}
+                </ThemedText>
+              </ThemedView>
 
-            <ThemedView style={styles.socialActions}>
-              <TouchableOpacity style={styles.socialButton} onPress={onLike}>
-                <IconSymbol 
-                  name={isLiked ? "heart.fill" : "heart"} 
-                  size={26} 
-                  color={isLiked ? colors.likeActive : colors.like} 
-                />
-                {post.likes.length > 0 && (
-                  <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
-                    {post.likes.length}
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.socialButton} onPress={onComment}>
-                <IconSymbol name="bubble.left" size={26} color={colors.comment} />
-                {post.comments.length > 0 && (
-                  <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
-                    {post.comments.length}
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.socialButton} onPress={onShare}>
-                <IconSymbol name="square.and.arrow.up" size={26} color={colors.share} />
-              </TouchableOpacity>
+              <ThemedView style={styles.socialActions}>
+                <TouchableOpacity style={styles.socialButton} onPress={onLike}>
+                  <IconSymbol 
+                    name={isLiked ? "heart.fill" : "heart"} 
+                    size={26} 
+                    color={isLiked ? colors.likeActive : colors.like} 
+                  />
+                  {post.likes.length > 0 && (
+                    <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
+                      {post.likes.length}
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.socialButton} onPress={onComment}>
+                  <IconSymbol name="bubble.left" size={26} color={colors.comment} />
+                  {post.comments.length > 0 && (
+                    <ThemedText style={[styles.socialButtonCount, { color: colors.text }]}>
+                      {post.comments.length}
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.socialButton} onPress={onShare}>
+                  <IconSymbol name="square.and.arrow.up" size={26} color={colors.share} />
+                </TouchableOpacity>
+              </ThemedView>
             </ThemedView>
-          </ThemedView>
+          )}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -294,7 +301,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -361,8 +368,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   diveTitle: {
-    fontSize: 32,
+    marginTop: 24,
+    fontSize: 28,
     fontWeight: 'bold',
+    lineHeight: 34,
   },
   keyStatsSection: {
     paddingHorizontal: 20,
