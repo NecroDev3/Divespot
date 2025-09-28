@@ -10,14 +10,14 @@ const getBaseUrl = () => {
   if (!isDevelopment) return 'https://your-production-api.com';
   
   // For development, use localhost for web and network IP for mobile
-  return Platform.OS === 'web' ? 'http://localhost:8000' : 'http://192.168.50.79:8000';
+  return Platform.OS === 'web' ? 'http://localhost:8000' : 'http://192.168.50.5:8000';
 };
 
 const getImageUrl = () => {
   if (!isDevelopment) return 'https://your-production-api.com';
   
   // For development, use localhost for web and network IP for mobile
-  return Platform.OS === 'web' ? 'http://localhost:5010' : 'http://192.168.50.79:5010';
+  return Platform.OS === 'web' ? 'http://localhost:5010' : 'http://192.168.50.5:5010';
 };
 
 // API Configuration

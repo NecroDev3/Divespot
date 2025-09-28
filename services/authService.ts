@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '@/constants/Api';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { googleAuthService, GoogleUser } from './googleAuthService';
+import { googleSignIn, GoogleUser } from './googleAuthService';
 
 // Simple types for auth
 export interface AuthUser {
@@ -183,8 +183,8 @@ class AuthService {
     try {
       console.log('🔐 Starting Google authentication...');
       
-      // Use the real Google Auth service
-      const googleUser: GoogleUser = await googleAuthService.signIn();
+      // Use the simplified Google Sign-In function
+      const googleUser: GoogleUser = await googleSignIn();
       console.log('✅ Google sign-in successful:', googleUser.email);
 
       // Try to authenticate with backend first
@@ -290,10 +290,16 @@ class AuthService {
   // Check if backend is available
   async checkHealth(): Promise<boolean> {
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const response = await fetch(`${this.baseUrl.replace('/api', '')}/`, {
         method: 'GET',
-        // Note: timeout not supported in fetch, using AbortController would be better
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       const data = await response.json();
       return response.ok && data.ok === true;
     } catch (error) {

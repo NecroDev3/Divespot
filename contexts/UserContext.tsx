@@ -134,13 +134,21 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const googleAuth = async () => {
     try {
+      console.log('🔄 UserContext: Starting Google authentication...');
       setIsLoading(true);
       
+      console.log('🔄 UserContext: Calling authService.googleAuth()...');
       const authUser = await authService.googleAuth();
+      console.log('✅ UserContext: Auth service returned user:', authUser.email);
+      
+      console.log('🔄 UserContext: Transforming auth user...');
       const user = transformAuthUser(authUser);
+      console.log('✅ UserContext: User transformed successfully');
       
       // Set user state first to trigger navigation
+      console.log('🔄 UserContext: Setting user state...');
       setUserState(user);
+      console.log('✅ UserContext: User state set, navigation should trigger');
       
       // Brief success message, then let navigation happen
       console.log('✅ Google sign-in successful, navigating to dashboard...');
@@ -151,9 +159,10 @@ export function UserProvider({ children }: UserProviderProps) {
       }, 100);
       
     } catch (error) {
-      console.error('Google auth failed:', error);
+      console.error('❌ UserContext: Google auth failed:', error);
       throw new Error(error instanceof Error ? error.message : 'Google sign-in failed. Please try again.');
     } finally {
+      console.log('🔄 UserContext: Setting loading to false');
       setIsLoading(false);
     }
   };

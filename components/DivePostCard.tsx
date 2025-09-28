@@ -3,7 +3,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { format } from 'date-fns';
 import { Image } from 'expo-image';
 import React from 'react';
-import { Dimensions, StyleSheet, TouchableOpacity } from 'react-native';
+import { Dimensions, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { DivePost } from '../types';
 import { DiveStatsCard } from './DiveStatsCard';
 import { ThemedText } from './ThemedText';
@@ -109,14 +109,16 @@ export const DivePostCard: React.FC<DivePostCardProps> = ({
           </ThemedText>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
-          <IconSymbol 
-            name="square.and.arrow.up" 
-            size={24} 
-            color={Colors[colorScheme ?? 'light'].share} 
-          />
-          <ThemedText style={styles.actionText}>Share</ThemedText>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity style={styles.actionButton} onPress={onShare}>
+            <IconSymbol 
+              name="square.and.arrow.up" 
+              size={24} 
+              color={Colors[colorScheme ?? 'light'].share} 
+            />
+            <ThemedText style={styles.actionText}>Share</ThemedText>
+          </TouchableOpacity>
+        )}
       </ThemedView>
 
       {/* Caption */}

@@ -1,4 +1,3 @@
-import { MapLocationPicker } from '@/components/MapLocationPicker';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -13,6 +12,14 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+
+// Platform-specific imports
+let MapLocationPicker: any;
+if (Platform.OS === 'web') {
+  MapLocationPicker = require('@/components/MapLocationPicker.web').MapLocationPicker;
+} else {
+  MapLocationPicker = require('@/components/MapLocationPicker').MapLocationPicker;
+}
 
 interface DiveLocation {
   latitude: number;
