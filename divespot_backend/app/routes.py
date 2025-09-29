@@ -149,14 +149,42 @@ def get_user(user_id):
 
 @api_bp.route("/users/<user_id>", methods=["PUT", "PATCH"])
 def update_user(user_id):
-    u = User.query.get_or_404(user_id)
+    u = User.query.get(user_id)
     data = request.get_json(force=True)
-    for field in [
-        "username","email","display_name","bio","profile_image_url","location",
-        "certification_level","favorite_spot_id","email_verified"
-    ]:
-        if field in data:
-            setattr(u, field, data[field])
+    
+    # If user doesn't exist, create a new one (upsert behavior)
+    if u is None:
+        try:
+            # Generate default values for required fields if not provided
+            username = data.get("username", f"user_{user_id[:8]}")
+            email = data.get("email", f"{user_id}@local.user")
+            display_name = data.get("display_name", username)
+            
+            u = User(
+                id=user_id,
+                username=username,
+                email=email,
+                display_name=display_name,
+                bio=data.get("bio"),
+                profile_image_url=data.get("profile_image_url"),
+                location=data.get("location"),
+                certification_level=data.get("certification_level", "Open Water"),
+                favorite_spot_id=data.get("favorite_spot_id"),
+                email_verified=bool(data.get("email_verified", False)),
+            )
+            db.session.add(u)
+        except IntegrityError:
+            db.session.rollback()
+            return {"error": "Failed to create user - username or email conflict"}, 400
+    else:
+        # Update existing user
+        for field in [
+            "username","email","display_name","bio","profile_image_url","location",
+            "certification_level","favorite_spot_id","email_verified"
+        ]:
+            if field in data:
+                setattr(u, field, data[field])
+    
     u.updated_at = datetime.utcnow()
     db.session.commit()
     return model_to_dict_user(u)
