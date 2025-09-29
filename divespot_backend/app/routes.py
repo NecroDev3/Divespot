@@ -4,10 +4,36 @@ from datetime import datetime, date
 from .db import db
 from .models import User, DiveSpot, DivePost, PostLike, PostComment, recalc_post_counts
 from .utils import parse_date, parse_datetime, paginated_query
+import re
 
 api_bp = Blueprint("api", __name__)
 
 # ----------- helpers -----------
+
+def normalize_image_url(url):
+    """
+    Convert image URLs to use the proxy endpoint for cross-network compatibility.
+    This allows all clients to access images regardless of the original upload network.
+    """
+    if not url:
+        return url
+    
+    # Extract filename from various image service URL formats
+    pattern = r'http://[^/]+:5010/files/(.+)'
+    match = re.search(pattern, url)
+    
+    if match:
+        filename = match.group(1)
+        # Return proxy URL that works for all clients
+        return f"/api/images/{filename}"
+    
+    return url
+
+def normalize_image_urls_in_list(urls):
+    """Normalize a list of image URLs"""
+    if not urls:
+        return urls
+    return [normalize_image_url(url) for url in urls]
 
 def model_to_dict_user(u: User):
     return {
@@ -55,7 +81,7 @@ def model_to_dict_post(p: DivePost):
         "user_id": p.user_id,
         "dive_spot_id": p.dive_spot_id,
         "caption": p.caption,
-        "image_urls": p.image_urls or [],
+        "image_urls": normalize_image_urls_in_list(p.image_urls or []),
         "dive_date": p.dive_date.isoformat() if p.dive_date else None,
         "max_depth": p.max_depth,
         "dive_duration": p.dive_duration,
@@ -491,3 +517,40 @@ def delete_comment(comment_id):
     db.session.commit()
     recalc_post_counts(post_id)
     return {"deleted": True}
+
+# ----------- Image Proxy -----------
+
+@api_bp.route("/images/<path:image_path>", methods=["GET"])
+def proxy_image(image_path):
+    """
+    Proxy images from the image service to handle cross-network access.
+    This allows iOS simulator to access images uploaded from different networks.
+    """
+    import requests
+    from flask import Response
+    
+    # Try different possible image service URLs
+    possible_urls = [
+        f"http://localhost:5010/files/{image_path}",
+        f"http://192.168.50.210:5010/files/{image_path}",
+        f"http://192.168.50.79:5010/files/{image_path}",
+        f"http://127.0.0.1:5010/files/{image_path}"
+    ]
+    
+    for url in possible_urls:
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                return Response(
+                    response.content,
+                    content_type=response.headers.get('content-type', 'image/jpeg'),
+                    headers={
+                        'Cache-Control': 'public, max-age=31536000',  # Cache for 1 year
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                )
+        except requests.RequestException:
+            continue
+    
+    # If no URL worked, return 404
+    abort(404, description="Image not found")

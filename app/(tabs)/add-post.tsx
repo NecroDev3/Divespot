@@ -10,7 +10,7 @@ import { imageService } from '@/services/imageService';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, Text, ActivityIndicator } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 
 // Platform-specific imports
@@ -206,7 +206,7 @@ export default function AddPostScreen() {
         [
           {
             text: 'View Feed',
-            onPress: () => router.push('/(tabs)/')
+            onPress: () => router.push('/(tabs)')
           },
           {
             text: 'Add Another',
@@ -506,7 +506,7 @@ export default function AddPostScreen() {
       {/* Map Picker Modal */}
       <Modal visible={showMapPicker} animationType="slide" presentationStyle="pageSheet">
         <MapLocationPicker
-          onLocationSelect={(location) => {
+          onLocationSelect={(location: any) => {
             setDiveLocation(location);
             setShowMapPicker(false);
           }}

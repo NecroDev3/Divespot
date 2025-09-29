@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -16,14 +17,6 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Image } from 'expo-image';
 import { User } from '@/types';
-
-interface ProfileEditModalProps {
-  visible: boolean;
-  user: User;
-  onClose: () => void;
-  onSave: (updatedUser: Partial<User>) => void;
-  onImagePick: () => void;
-}
 
 const CERTIFICATION_LEVELS = [
   'Open Water',
@@ -33,6 +26,15 @@ const CERTIFICATION_LEVELS = [
   'Open Water Instructor',
   'Master Instructor',
 ];
+
+interface ProfileEditModalProps {
+  visible: boolean;
+  user: User;
+  onClose: () => void;
+  onSave: (updatedUser: Partial<User>) => void;
+  onImagePick: () => void;
+}
+
 
 export default function ProfileEditModal({ 
   visible, 
@@ -46,20 +48,17 @@ export default function ProfileEditModal({
 
   const [formData, setFormData] = useState({
     displayName: user?.displayName || '',
-    username: user?.username || '',
     bio: user?.bio || '',
     location: user?.location || '',
     certificationLevel: user?.stats?.certificationLevel || 'Open Water',
   });
 
-  const [showCertificationPicker, setShowCertificationPicker] = useState(false);
 
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
       setFormData({
         displayName: user.displayName || '',
-        username: user.username || '',
         bio: user.bio || '',
         location: user.location || '',
         certificationLevel: user.stats?.certificationLevel || 'Open Water',
@@ -73,14 +72,8 @@ export default function ProfileEditModal({
       return;
     }
 
-    if (!formData.username.trim()) {
-      Alert.alert('Error', 'Username is required');
-      return;
-    }
-
     const updatedUser: Partial<User> = {
       displayName: formData.displayName.trim(),
-      username: formData.username.trim(),
       bio: formData.bio.trim() || undefined,
       location: formData.location.trim() || undefined,
       stats: {
@@ -93,53 +86,6 @@ export default function ProfileEditModal({
     onClose();
   };
 
-  const renderCertificationPicker = () => (
-    <Modal
-      visible={showCertificationPicker}
-      transparent
-      animationType="slide"
-    >
-      <ThemedView style={styles.pickerOverlay}>
-        <ThemedView style={[styles.pickerContainer, { backgroundColor: colors.background }]}>
-          <ThemedView style={styles.pickerHeader}>
-            <ThemedText type="subtitle">Select Certification Level</ThemedText>
-            <TouchableOpacity onPress={() => setShowCertificationPicker(false)}>
-              <IconSymbol name="xmark" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </ThemedView>
-          
-          <ScrollView style={styles.pickerOptions}>
-            {CERTIFICATION_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={[
-                  styles.pickerOption,
-                  { 
-                    backgroundColor: level === formData.certificationLevel ? colors.primary + '20' : 'transparent',
-                    borderBottomColor: colors.border 
-                  }
-                ]}
-                onPress={() => {
-                  setFormData(prev => ({ ...prev, certificationLevel: level }));
-                  setShowCertificationPicker(false);
-                }}
-              >
-                <ThemedText style={[
-                  styles.pickerOptionText,
-                  { color: level === formData.certificationLevel ? colors.primary : colors.text }
-                ]}>
-                  {level}
-                </ThemedText>
-                {level === formData.certificationLevel && (
-                  <IconSymbol name="checkmark" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </ThemedView>
-      </ThemedView>
-    </Modal>
-  );
 
   return (
     <>
@@ -154,9 +100,9 @@ export default function ProfileEditModal({
         >
           <ThemedView style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
             {Platform.OS === 'web' ? (
-              <TouchableOpacity onPress={onClose} style={[styles.webBackButton, { backgroundColor: colors.overlay, borderColor: colors.border }]}>
+              <TouchableOpacity onPress={onClose} style={[styles.headerButton, { backgroundColor: colors.overlay, borderColor: colors.border }]}>
                 <IconSymbol name="chevron.left" size={18} color={colors.text} />
-                <ThemedText style={[styles.webBackText, { color: colors.text }]}>Back</ThemedText>
+                <ThemedText style={[styles.headerButtonText, { color: colors.text }]}>Back</ThemedText>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={onClose} style={styles.headerButton}>
@@ -216,20 +162,18 @@ export default function ProfileEditModal({
               </ThemedView>
 
               <ThemedView style={styles.fieldGroup}>
-                <ThemedText style={[styles.fieldLabel, { color: colors.text }]}>Username *</ThemedText>
-                <TextInput
-                  style={[styles.textInput, { 
-                    backgroundColor: colors.surface, 
-                    color: colors.text,
-                    borderColor: colors.border 
-                  }]}
-                  value={formData.username}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, username: text.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
-                  placeholder="Enter your username"
-                  placeholderTextColor={colors.text + '60'}
-                  maxLength={30}
-                  autoCapitalize="none"
-                />
+                <ThemedText style={[styles.fieldLabel, { color: colors.text }]}>Username</ThemedText>
+                <ThemedView style={[styles.readOnlyField, { 
+                  backgroundColor: colors.overlay, 
+                  borderColor: colors.border 
+                }]}>
+                  <ThemedText style={[styles.readOnlyText, { color: colors.text }]}>
+                    @{user?.username || 'username'}
+                  </ThemedText>
+                  <ThemedText style={[styles.readOnlyHint, { color: colors.text }]}>
+                    Username cannot be changed
+                  </ThemedText>
+                </ThemedView>
               </ThemedView>
 
               <ThemedView style={styles.fieldGroup}>
@@ -271,18 +215,20 @@ export default function ProfileEditModal({
 
               <ThemedView style={styles.fieldGroup}>
                 <ThemedText style={[styles.fieldLabel, { color: colors.text }]}>Certification Level</ThemedText>
-                <TouchableOpacity
-                  style={[styles.picker, { 
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border 
-                  }]}
-                  onPress={() => setShowCertificationPicker(true)}
-                >
-                  <ThemedText style={[styles.pickerText, { color: colors.text }]}>
-                    {formData.certificationLevel}
-                  </ThemedText>
-                  <IconSymbol name="chevron.down" size={16} color={colors.text} />
-                </TouchableOpacity>
+                <ThemedView style={[styles.pickerWrapper, { backgroundColor: colors.surface }]}>
+                  <Picker
+                    selectedValue={formData.certificationLevel}
+                    onValueChange={(itemValue) =>
+                      setFormData(prev => ({ ...prev, certificationLevel: itemValue }))
+                    }
+                    style={styles.nativePicker}
+                    itemStyle={{ color: colors.text, fontSize: 16 }}
+                  >
+                    {CERTIFICATION_LEVELS.map((level) => (
+                      <Picker.Item key={level} label={level} value={level} color={colors.text} />
+                    ))}
+                  </Picker>
+                </ThemedView>
               </ThemedView>
             </ThemedView>
 
@@ -295,7 +241,6 @@ export default function ProfileEditModal({
         </KeyboardAvoidingView>
       </Modal>
 
-      {renderCertificationPicker()}
     </>
   );
 }
@@ -368,6 +313,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 50,
   },
+  readOnlyField: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  readOnlyText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  readOnlyHint: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 2,
+  },
   textArea: {
     borderWidth: 1,
     borderRadius: 12,
@@ -382,17 +343,17 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     marginTop: 4,
   },
-  picker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  pickerWrapper: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 16,
-    minHeight: 50,
+    borderColor: '#E5E5E5',
+    overflow: 'hidden',
+    marginTop: 5,
+    
   },
-  pickerText: {
-    fontSize: 16,
+  nativePicker: {
+    height: Platform.OS === 'ios' ? 120 : 50,
+    width: '100%',
   },
   footer: {
     padding: 20,
@@ -402,39 +363,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
     textAlign: 'center',
-  },
-  // Picker Modal Styles
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  pickerContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  pickerOptions: {
-    maxHeight: 300,
-  },
-  pickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  pickerOptionText: {
-    fontSize: 16,
   },
 });

@@ -5,12 +5,11 @@ import { Image } from 'expo-image';
 import React from 'react';
 import { Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
 import { DivePost } from '../types';
-import { DiveStatsCard } from './DiveStatsCard';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { IconSymbol } from './ui/IconSymbol';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 interface DetailedDivePostProps {
   post: DivePost;

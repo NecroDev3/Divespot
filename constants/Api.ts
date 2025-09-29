@@ -9,15 +9,21 @@ export const isProduction = !__DEV__;
 const getBaseUrl = () => {
   if (!isDevelopment) return 'https://your-production-api.com';
   
-  // For development, use localhost for web and network IP for mobile
-  return Platform.OS === 'web' ? 'http://localhost:8000' : 'http://192.168.50.5:8000';
+  // For development, use localhost for web/iOS simulator, network IP for physical device
+  if (Platform.OS === 'web' || Platform.OS === 'ios') {
+    return 'http://localhost:8000';
+  }
+  return 'http://192.168.50.210:8000';
 };
 
 const getImageUrl = () => {
   if (!isDevelopment) return 'https://your-production-api.com';
   
-  // For development, use localhost for web and network IP for mobile
-  return Platform.OS === 'web' ? 'http://localhost:5010' : 'http://192.168.50.5:5010';
+  // For development, use localhost for web/iOS simulator, network IP for physical device
+  if (Platform.OS === 'web' || Platform.OS === 'ios') {
+    return 'http://localhost:5010';
+  }
+  return 'http://192.168.50.210:5010';
 };
 
 // API Configuration

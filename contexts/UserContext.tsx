@@ -3,6 +3,7 @@ import { User, DivePost } from '@/types';
 import { authService, AuthUser } from '@/services/authService';
 import { userService, UpdateProfileData } from '@/services/userService';
 import { divePostsService } from '@/services/divePostsService';
+import { imageService } from '@/services/imageService';
 import { Alert } from 'react-native';
 
 // Helper function to transform AuthUser to User
@@ -305,7 +306,7 @@ export function UserProvider({ children }: UserProviderProps) {
           createdBy: apiPost.dive_spot?.created_by || 'system',
           createdAt: new Date(apiPost.dive_spot?.created_at || new Date()),
         },
-        imageUris: apiPost.image_urls || [],
+        imageUris: (apiPost.image_urls || []).map((url: string) => imageService.getImageUrl(url)),
         caption: apiPost.caption,
         diveDetails: {
           date: new Date(apiPost.dive_date),

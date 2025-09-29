@@ -9,6 +9,7 @@ import { useUser } from '@/contexts/UserContext';
 import { DivePost, User, DiveSpot } from '@/types';
 import { divePostsService } from '@/services/divePostsService';
 import { shareService } from '@/services/shareService';
+import { imageService } from '@/services/imageService';
 import { Image } from 'expo-image';
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -55,7 +56,7 @@ const transformApiPost = (apiPost: any): DivePost => {
       createdBy: apiPost.dive_spot.created_by,
       createdAt: new Date(apiPost.dive_spot.created_at || new Date()),
     },
-    imageUris: apiPost.image_urls || [],
+    imageUris: (apiPost.image_urls || []).map((url: string) => imageService.getImageUrl(url)),
     caption: apiPost.caption,
     diveDetails: {
       date: new Date(apiPost.dive_date),

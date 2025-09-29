@@ -66,7 +66,7 @@ class ImageService {
       // Always return network-accessible URL for cross-device compatibility
       // Use the network IP so images can be accessed from any device on the network
       // This ensures images work on both web and mobile platforms
-      const networkImageUrl = `http://192.168.50.79:5010${result.file_url}`;
+      const networkImageUrl = `${this.baseUrl}${result.file_url}`;
       
       console.log('✅ Image uploaded successfully:', networkImageUrl);
       return networkImageUrl;
@@ -103,13 +103,20 @@ class ImageService {
 
   /**
    * Get the full URL for an image file
-   * @param fileUrl - The file URL returned from upload (e.g., "/files/filename.jpg")
+   * @param fileUrl - The file URL returned from upload (e.g., "/files/filename.jpg" or "/api/images/filename.jpg")
    * @returns Full URL to access the image
    */
   getImageUrl(fileUrl: string): string {
     if (fileUrl.startsWith('http')) {
       return fileUrl; // Already a full URL
     }
+    
+    // Handle proxy URLs from the main backend
+    if (fileUrl.startsWith('/api/images/')) {
+      return `${API_CONFIG.BASE_URL.replace('/api', '')}${fileUrl}`;
+    }
+    
+    // Handle direct image service URLs
     return `${this.baseUrl}${fileUrl}`;
   }
 
