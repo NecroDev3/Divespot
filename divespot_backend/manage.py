@@ -5,6 +5,7 @@ from pathlib import Path
 from flask import Flask
 from app import create_app
 from app.db import db
+from app.models import User
 
 MIGRATIONS = ["migrations/001_initial.sql", "migrations/002_seed_spots.sql"]
 DB_PATH = "dive_spot.db"
@@ -56,6 +57,15 @@ def create_tables_via_orm():
         db.create_all()
     print("ORM create_all finished.")
 
+def create_user_cli(username, password, email, display_name):
+    app = create_app()
+    with app.app_context():
+        user = User(username=username, email=email, display_name=display_name)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        print(f"User {username} created successfully.")
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Manage DiveSpot API")
@@ -64,6 +74,12 @@ def main():
     sub.add_parser("migrate")
     sub.add_parser("drop")
     sub.add_parser("create-all")
+    create_user_parser = sub.add_parser("create-user")
+    create_user_parser.add_argument("username", help="Username for the new user")
+    create_user_parser.add_argument("password", help="Password for the new user")
+    create_user_parser.add_argument("email", help="Email for the new user")
+    create_user_parser.add_argument("display_name", help="Display name for the new user")
+
 
     args = parser.parse_args()
     if args.cmd == "migrate":
@@ -72,6 +88,8 @@ def main():
         drop()
     elif args.cmd == "create-all":
         create_tables_via_orm()
+    elif args.cmd == "create-user":
+        create_user_cli(args.username, args.password, args.email, args.display_name)
     else:
         parser.print_help()
 
