@@ -1,7 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+
 from .db import db, init_sqlite_pragma
 from .routes import api_bp
+
 
 def create_app():
     app = Flask(__name__)
@@ -12,9 +15,13 @@ def create_app():
 
     # Enable CORS for all routes - completely open for development
     CORS(app, origins="*", supports_credentials=True)
+    app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this in your production app!
 
     db.init_app(app)
     init_sqlite_pragma(app)
+
+    # Setup the Flask-JWT-Extended extension
+    jwt = JWTManager(app)
 
     # Ensure tables are created
     with app.app_context():

@@ -5,8 +5,25 @@ from .db import db
 from .models import User, DiveSpot, DivePost, PostLike, PostComment, recalc_post_counts
 from .utils import parse_date, parse_datetime, paginated_query
 import re
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 api_bp = Blueprint("api", __name__)
+
+# ----------- Auth -----------
+
+@api_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json(force=True)
+    username = data.get("username", None)
+    password = data.get("password", None)
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and user.check_password(password):
+        access_token = create_access_token(identity=user.id)
+        return jsonify(access_token=access_token)
+
+    return jsonify({"msg": "Bad username or password"}), 401
 
 # ----------- helpers -----------
 
@@ -152,9 +169,9 @@ def create_user():
             location=data.get("location"),
             certification_level=data.get("certification_level", "Open Water"),
             favorite_spot_id=data.get("favorite_spot_id"),
-            password_hash=data.get("password_hash"),
             email_verified=bool(data.get("email_verified", False)),
         )
+        user.set_password(data["password"])
         db.session.add(user)
         db.session.commit()
         return model_to_dict_user(user), 201
@@ -163,17 +180,20 @@ def create_user():
         return {"error": "username or email already exists"}, 400
 
 @api_bp.route("/users", methods=["GET"])
+@jwt_required()
 def list_users():
     q = User.query.order_by(User.created_at.desc())
     items, meta = paginated_query(q)
     return {"data": [model_to_dict_user(u) for u in items], "meta": meta}
 
 @api_bp.route("/users/<user_id>", methods=["GET"])
+@jwt_required()
 def get_user(user_id):
     u = User.query.get_or_404(user_id)
     return model_to_dict_user(u)
 
 @api_bp.route("/users/<user_id>", methods=["PUT", "PATCH"])
+@jwt_required()
 def update_user(user_id):
     u = User.query.get(user_id)
     data = request.get_json(force=True)
@@ -216,6 +236,7 @@ def update_user(user_id):
     return model_to_dict_user(u)
 
 @api_bp.route("/users/<user_id>", methods=["DELETE"])
+@jwt_required()
 def delete_user(user_id):
     u = User.query.get_or_404(user_id)
     db.session.delete(u)
@@ -225,6 +246,7 @@ def delete_user(user_id):
 # ----------- Dive Spots -----------
 
 @api_bp.route("/spots", methods=["POST"])
+@jwt_required()
 def create_spot():
     data = request.get_json(force=True)
     
@@ -282,6 +304,7 @@ def create_spot():
     return model_to_dict_spot(spot), 201
 
 @api_bp.route("/spots", methods=["GET"])
+@jwt_required()
 def list_spots():
     q = DiveSpot.query
     # optional filters
@@ -296,6 +319,7 @@ def list_spots():
     return {"data": [model_to_dict_spot(s) for s in items], "meta": meta}
 
 @api_bp.route("/spots/search", methods=["GET"])
+@jwt_required()
 def search_spots():
     qstr = request.args.get("q", "")
     q = DiveSpot.query.filter(
@@ -305,11 +329,13 @@ def search_spots():
     return {"data": [model_to_dict_spot(s) for s in items], "meta": meta}
 
 @api_bp.route("/spots/<spot_id>", methods=["GET"])
+@jwt_required()
 def get_spot(spot_id):
     s = DiveSpot.query.get_or_404(spot_id)
     return model_to_dict_spot(s)
 
 @api_bp.route("/spots/<spot_id>", methods=["PUT", "PATCH"])
+@jwt_required()
 def update_spot(spot_id):
     s = DiveSpot.query.get_or_404(spot_id)
     data = request.get_json(force=True)
@@ -327,6 +353,7 @@ def update_spot(spot_id):
     return model_to_dict_spot(s)
 
 @api_bp.route("/spots/<spot_id>", methods=["DELETE"])
+@jwt_required()
 def delete_spot(spot_id):
     s = DiveSpot.query.get_or_404(spot_id)
     db.session.delete(s)
@@ -336,6 +363,7 @@ def delete_spot(spot_id):
 # ----------- Posts -----------
 
 @api_bp.route("/posts", methods=["POST"])
+@jwt_required()
 def create_post():
     data = request.get_json(force=True)
     post = DivePost(
@@ -375,6 +403,7 @@ def create_post():
     return model_to_dict_post(post), 201
 
 @api_bp.route("/posts", methods=["GET"])
+@jwt_required()
 def list_posts():
     q = DivePost.query
     # filters
@@ -389,11 +418,13 @@ def list_posts():
     return {"data": [model_to_dict_post(p) for p in items], "meta": meta}
 
 @api_bp.route("/posts/<post_id>", methods=["GET"])
+@jwt_required()
 def get_post(post_id):
     p = DivePost.query.get_or_404(post_id)
     return model_to_dict_post(p)
 
 @api_bp.route("/posts/<post_id>", methods=["PUT", "PATCH"])
+@jwt_required()
 def update_post(post_id):
     p = DivePost.query.get_or_404(post_id)
     data = request.get_json(force=True)
@@ -409,6 +440,7 @@ def update_post(post_id):
     return model_to_dict_post(p)
 
 @api_bp.route("/posts/<post_id>", methods=["DELETE"])
+@jwt_required()
 def delete_post(post_id):
     p = DivePost.query.get_or_404(post_id)
     db.session.delete(p)
@@ -417,6 +449,7 @@ def delete_post(post_id):
 
 # Feed (recent 30 days default order by created_at desc)
 @api_bp.route("/feed", methods=["GET"])
+@jwt_required()
 def feed():
     q = DivePost.query.order_by(DivePost.created_at.desc())
     items, meta = paginated_query(q, default_limit=20)
@@ -443,6 +476,7 @@ def feed():
 # ----------- Likes -----------
 
 @api_bp.route("/posts/<post_id>/like", methods=["POST"])
+@jwt_required()
 def like_post(post_id):
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
@@ -461,6 +495,7 @@ def like_post(post_id):
     return {"liked": True, "post_id": post_id}
 
 @api_bp.route("/posts/<post_id>/unlike", methods=["POST"])
+@jwt_required()
 def unlike_post(post_id):
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
@@ -472,6 +507,7 @@ def unlike_post(post_id):
     return {"unliked": True, "post_id": post_id}
 
 @api_bp.route("/posts/<post_id>/likes", methods=["GET"])
+@jwt_required()
 def list_likes(post_id):
     q = PostLike.query.filter_by(post_id=post_id).order_by(PostLike.created_at.desc())
     items, meta = paginated_query(q)
@@ -483,6 +519,7 @@ def list_likes(post_id):
 # ----------- Comments -----------
 
 @api_bp.route("/posts/<post_id>/comments", methods=["POST"])
+@jwt_required()
 def create_comment(post_id):
     data = request.get_json(force=True)
     if not data.get("user_id") or not data.get("content"):
@@ -494,12 +531,14 @@ def create_comment(post_id):
     return model_to_dict_comment(c), 201
 
 @api_bp.route("/posts/<post_id>/comments", methods=["GET"])
+@jwt_required()
 def list_comments(post_id):
     q = PostComment.query.filter_by(post_id=post_id).order_by(PostComment.created_at.asc())
     items, meta = paginated_query(q, default_limit=50)
     return {"data": [model_to_dict_comment(c) for c in items], "meta": meta}
 
 @api_bp.route("/comments/<comment_id>", methods=["PUT", "PATCH"])
+@jwt_required()
 def update_comment(comment_id):
     c = PostComment.query.get_or_404(comment_id)
     data = request.get_json(force=True)
@@ -510,6 +549,7 @@ def update_comment(comment_id):
     return model_to_dict_comment(c)
 
 @api_bp.route("/comments/<comment_id>", methods=["DELETE"])
+@jwt_required()
 def delete_comment(comment_id):
     c = PostComment.query.get_or_404(comment_id)
     post_id = c.post_id
