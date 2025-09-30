@@ -1,6 +1,9 @@
 from flask import Flask
+from flask_jwt_extended import JWTManager
+
 from .db import db, init_sqlite_pragma
 from .routes import api_bp
+
 
 def create_app():
     app = Flask(__name__)
@@ -8,9 +11,13 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dive_spot.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
+    app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this in your production app!
 
     db.init_app(app)
     init_sqlite_pragma(app)
+
+    # Setup the Flask-JWT-Extended extension
+    jwt = JWTManager(app)
 
     # register blueprints
     app.register_blueprint(api_bp, url_prefix="/api")
