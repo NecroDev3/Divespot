@@ -4,10 +4,36 @@ from datetime import datetime, date
 from .db import db
 from .models import User, DiveSpot, DivePost, PostLike, PostComment, recalc_post_counts
 from .utils import parse_date, parse_datetime, paginated_query
+import re
 
 api_bp = Blueprint("api", __name__)
 
 # ----------- helpers -----------
+
+def normalize_image_url(url):
+    """
+    Convert image URLs to use the proxy endpoint for cross-network compatibility.
+    This allows all clients to access images regardless of the original upload network.
+    """
+    if not url:
+        return url
+    
+    # Extract filename from various image service URL formats
+    pattern = r'http://[^/]+:5010/files/(.+)'
+    match = re.search(pattern, url)
+    
+    if match:
+        filename = match.group(1)
+        # Return proxy URL that works for all clients
+        return f"/api/images/{filename}"
+    
+    return url
+
+def normalize_image_urls_in_list(urls):
+    """Normalize a list of image URLs"""
+    if not urls:
+        return urls
+    return [normalize_image_url(url) for url in urls]
 
 def model_to_dict_user(u: User):
     return {
@@ -55,7 +81,7 @@ def model_to_dict_post(p: DivePost):
         "user_id": p.user_id,
         "dive_spot_id": p.dive_spot_id,
         "caption": p.caption,
-        "image_urls": p.image_urls or [],
+        "image_urls": normalize_image_urls_in_list(p.image_urls or []),
         "dive_date": p.dive_date.isoformat() if p.dive_date else None,
         "max_depth": p.max_depth,
         "dive_duration": p.dive_duration,
@@ -149,14 +175,42 @@ def get_user(user_id):
 
 @api_bp.route("/users/<user_id>", methods=["PUT", "PATCH"])
 def update_user(user_id):
-    u = User.query.get_or_404(user_id)
+    u = User.query.get(user_id)
     data = request.get_json(force=True)
-    for field in [
-        "username","email","display_name","bio","profile_image_url","location",
-        "certification_level","favorite_spot_id","email_verified"
-    ]:
-        if field in data:
-            setattr(u, field, data[field])
+    
+    # If user doesn't exist, create a new one (upsert behavior)
+    if u is None:
+        try:
+            # Generate default values for required fields if not provided
+            username = data.get("username", f"user_{user_id[:8]}")
+            email = data.get("email", f"{user_id}@local.user")
+            display_name = data.get("display_name", username)
+            
+            u = User(
+                id=user_id,
+                username=username,
+                email=email,
+                display_name=display_name,
+                bio=data.get("bio"),
+                profile_image_url=data.get("profile_image_url"),
+                location=data.get("location"),
+                certification_level=data.get("certification_level", "Open Water"),
+                favorite_spot_id=data.get("favorite_spot_id"),
+                email_verified=bool(data.get("email_verified", False)),
+            )
+            db.session.add(u)
+        except IntegrityError:
+            db.session.rollback()
+            return {"error": "Failed to create user - username or email conflict"}, 400
+    else:
+        # Update existing user
+        for field in [
+            "username","email","display_name","bio","profile_image_url","location",
+            "certification_level","favorite_spot_id","email_verified"
+        ]:
+            if field in data:
+                setattr(u, field, data[field])
+    
     u.updated_at = datetime.utcnow()
     db.session.commit()
     return model_to_dict_user(u)
@@ -173,6 +227,43 @@ def delete_user(user_id):
 @api_bp.route("/spots", methods=["POST"])
 def create_spot():
     data = request.get_json(force=True)
+    
+    # Check if the user exists, if not create a system user or use fallback
+    created_by_user_id = data.get("created_by", "system")
+    user_exists = User.query.filter_by(id=created_by_user_id).first()
+    
+    if not user_exists and created_by_user_id != "system":
+        # Create a basic user record for Google OAuth users
+        try:
+            new_user = User(
+                id=created_by_user_id,
+                username=f"user_{created_by_user_id[:8]}",
+                email=f"{created_by_user_id}@google.oauth",
+                display_name="Google User",
+                location="Unknown",
+                certification_level="Open Water"
+            )
+            db.session.add(new_user)
+            db.session.flush()  # Flush to get the user created before creating the spot
+        except Exception as e:
+            print(f"Failed to create user, using system fallback: {e}")
+            created_by_user_id = "system"
+    
+    # Create a system user if it doesn't exist
+    if created_by_user_id == "system":
+        system_user = User.query.filter_by(id="system").first()
+        if not system_user:
+            system_user = User(
+                id="system",
+                username="system",
+                email="system@divespot.app",
+                display_name="System",
+                location="System",
+                certification_level="Instructor"
+            )
+            db.session.add(system_user)
+            db.session.flush()
+    
     spot = DiveSpot(
         name=data["name"],
         description=data.get("description"),
@@ -184,7 +275,7 @@ def create_spot():
         water_type=data.get("water_type", "Salt"),
         avg_visibility=data.get("avg_visibility"),
         avg_temperature=data.get("avg_temperature"),
-        created_by=data["created_by"],
+        created_by=created_by_user_id,
     )
     db.session.add(spot)
     db.session.commit()
@@ -426,3 +517,40 @@ def delete_comment(comment_id):
     db.session.commit()
     recalc_post_counts(post_id)
     return {"deleted": True}
+
+# ----------- Image Proxy -----------
+
+@api_bp.route("/images/<path:image_path>", methods=["GET"])
+def proxy_image(image_path):
+    """
+    Proxy images from the image service to handle cross-network access.
+    This allows iOS simulator to access images uploaded from different networks.
+    """
+    import requests
+    from flask import Response
+    
+    # Try different possible image service URLs
+    possible_urls = [
+        f"http://localhost:5010/files/{image_path}",
+        f"http://192.168.50.210:5010/files/{image_path}",
+        f"http://192.168.50.79:5010/files/{image_path}",
+        f"http://127.0.0.1:5010/files/{image_path}"
+    ]
+    
+    for url in possible_urls:
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                return Response(
+                    response.content,
+                    content_type=response.headers.get('content-type', 'image/jpeg'),
+                    headers={
+                        'Cache-Control': 'public, max-age=31536000',  # Cache for 1 year
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                )
+        except requests.RequestException:
+            continue
+    
+    # If no URL worked, return 404
+    abort(404, description="Image not found")

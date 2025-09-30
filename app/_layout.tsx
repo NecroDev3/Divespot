@@ -3,11 +3,13 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { Colors } from '@/constants/Colors';
 import AuthScreen from '@/components/AuthScreen';
+
+// Web-specific imports can go here if needed
 
 // Inner component that uses the UserContext
 function RootLayoutInner() {

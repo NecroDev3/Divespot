@@ -2,7 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View, TouchableOpacity, TextInput, SafeAreaView, FlatList } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
@@ -15,14 +15,25 @@ interface LocationData {
   name?: string;
 }
 
+interface SearchSuggestion {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  type: 'geocode' | 'popular_spot';
+}
+
 interface MapLocationPickerProps {
   onLocationSelect: (location: LocationData) => void;
+  onCancel?: () => void;
   initialLocation?: LocationData;
   style?: any;
 }
 
 export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   onLocationSelect,
+  onCancel,
   initialLocation,
   style,
 }) => {
@@ -32,16 +43,46 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(initialLocation || null);
   const [region, setRegion] = useState<Region>({
-    latitude: initialLocation?.latitude || 25.7617, // Default to Dubai (popular diving destination)
-    longitude: initialLocation?.longitude || 55.9657,
+    latitude: initialLocation?.latitude || -33.9249, // Default to Cape Town (diving destination)
+    longitude: initialLocation?.longitude || 18.4241,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Popular Cape Town dive spots for quick suggestions
+  const popularDiveSpots = [
+    { name: "Two Oceans Aquarium", address: "V&A Waterfront, Cape Town", latitude: -33.9028, longitude: 18.4201 },
+    { name: "Seal Island", address: "False Bay, Cape Town", latitude: -34.1369, longitude: 18.5819 },
+    { name: "Atlantis Reef", address: "Atlantic Seaboard, Cape Town", latitude: -33.8567, longitude: 18.3026 },
+    { name: "Castle Rock", address: "Cape Peninsula, Cape Town", latitude: -34.3578, longitude: 18.4678 },
+    { name: "Windmill Beach", address: "Simon's Town, Cape Town", latitude: -34.1950, longitude: 18.4503 },
+    { name: "Pyramid Rock", address: "Miller's Point, Cape Town", latitude: -34.2156, longitude: 18.4789 },
+    { name: "Smitswinkel Bay", address: "Cape Peninsula, Cape Town", latitude: -34.2167, longitude: 18.4500 },
+    { name: "Long Beach", address: "Kommetjie, Cape Town", latitude: -34.1333, longitude: 18.3167 },
+  ];
 
   useEffect(() => {
     getCurrentLocation();
   }, []);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim().length > 2) {
+        performSearch(searchQuery);
+      } else {
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const getCurrentLocation = async () => {
     try {
@@ -102,6 +143,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const handleMapPress = async (event: any) => {
     const { coordinate } = event.nativeEvent;
     setIsLoading(true);
+    setShowSuggestions(false); // Hide suggestions when tapping map
 
     try {
       const address = await reverseGeocode(coordinate.latitude, coordinate.longitude);
@@ -125,6 +167,137 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   const handleCurrentLocationPress = () => {
     getCurrentLocation();
+  };
+
+  const searchLocation = async (query: string) => {
+    if (!query.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await Location.geocodeAsync(query);
+      
+      if (results.length > 0) {
+        const result = results[0];
+        const newRegion = {
+          latitude: result.latitude,
+          longitude: result.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        
+        setRegion(newRegion);
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
+        
+        // Get address for the searched location
+        const address = await reverseGeocode(result.latitude, result.longitude);
+        const locationData: LocationData = {
+          latitude: result.latitude,
+          longitude: result.longitude,
+          address,
+          name: query,
+        };
+        
+        setSelectedLocation(locationData);
+      } else {
+        Alert.alert('Location Not Found', 'Could not find the specified location. Please try a different search term.');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      Alert.alert('Search Error', 'Could not search for the location. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchSubmit = () => {
+    searchLocation(searchQuery);
+    setShowSuggestions(false);
+  };
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) return;
+    
+    setIsSearching(true);
+    const suggestions: SearchSuggestion[] = [];
+    
+    try {
+      // First, add matching popular dive spots
+      const matchingSpots = popularDiveSpots.filter(spot =>
+        spot.name.toLowerCase().includes(query.toLowerCase()) ||
+        spot.address.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      matchingSpots.forEach((spot, index) => {
+        suggestions.push({
+          id: `popular-${index}`,
+          name: spot.name,
+          address: spot.address,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          type: 'popular_spot'
+        });
+      });
+      
+      // Then, add geocoding results (limit to avoid too many results)
+      if (suggestions.length < 5) {
+        try {
+          const geocodeResults = await Location.geocodeAsync(query);
+          const limitedResults = geocodeResults.slice(0, 5 - suggestions.length);
+          
+          for (let i = 0; i < limitedResults.length; i++) {
+            const result = limitedResults[i];
+            const address = await reverseGeocode(result.latitude, result.longitude);
+            
+            suggestions.push({
+              id: `geocode-${i}`,
+              name: query,
+              address: address,
+              latitude: result.latitude,
+              longitude: result.longitude,
+              type: 'geocode'
+            });
+          }
+        } catch (geocodeError) {
+          console.log('Geocoding failed, showing only popular spots');
+        }
+      }
+      
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+      
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion: SearchSuggestion) => {
+    const locationData: LocationData = {
+      latitude: suggestion.latitude,
+      longitude: suggestion.longitude,
+      address: suggestion.address,
+      name: suggestion.name,
+    };
+    
+    // Update map region
+    const newRegion = {
+      latitude: suggestion.latitude,
+      longitude: suggestion.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    
+    setRegion(newRegion);
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(newRegion, 1000);
+    }
+    
+    setSelectedLocation(locationData);
+    setSearchQuery(suggestion.name);
+    setShowSuggestions(false);
   };
 
   const getDivingSpotMarkers = () => {
@@ -155,19 +328,97 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   };
 
   return (
-    <ThemedView style={[styles.container, style]}>
-      {/* Map Header */}
-      <ThemedView style={styles.header}>
-        <ThemedView style={styles.headerContent}>
-          <IconSymbol name="map" size={24} color={colors.primary} />
-          <ThemedText style={[styles.headerTitle, { color: colors.primary }]}>
-            Select Dive Spot Location
+    <SafeAreaView style={[styles.container, style, { backgroundColor: colors.background }]}>
+      {/* Enhanced Header with Back Button and Search */}
+      <ThemedView style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <ThemedView style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={onCancel}
+          >
+            <IconSymbol name="chevron.left" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          
+          <ThemedText style={[styles.headerTitle, { color: colors.text }]}>
+            Select Location
           </ThemedText>
+          
+          <View style={styles.headerSpacer} />
         </ThemedView>
+        
+        {/* Search Bar */}
+        <ThemedView style={styles.searchContainer}>
+          <ThemedView style={[styles.searchBar, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <IconSymbol name="magnifyingglass" size={20} color={colors.text + '60'} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search for a location..."
+              placeholderTextColor={colors.text + '60'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
+              onFocus={() => {
+                if (searchQuery.trim().length > 2) {
+                  setShowSuggestions(true);
+                }
+              }}
+              returnKeyType="search"
+            />
+            {isSearching && (
+              <IconSymbol name="arrow.clockwise" size={16} color={colors.primary} />
+            )}
+            {searchQuery.length > 0 && !isSearching && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <IconSymbol name="xmark.circle.fill" size={16} color={colors.text + '60'} />
+              </TouchableOpacity>
+            )}
+          </ThemedView>
+        </ThemedView>
+        
         <ThemedText style={[styles.instruction, { color: colors.text }]}>
-          Tap on the map to select your dive location
+          Search above or tap on the map to select your dive location
         </ThemedText>
       </ThemedView>
+
+      {/* Search Suggestions Dropdown */}
+      {showSuggestions && searchSuggestions.length > 0 && (
+        <ThemedView style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <FlatList
+            data={searchSuggestions}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleSuggestionSelect(item)}
+              >
+                <IconSymbol 
+                  name={item.type === 'popular_spot' ? "star.fill" : "location"} 
+                  size={16} 
+                  color={item.type === 'popular_spot' ? colors.primary : colors.text + '60'} 
+                />
+                <View style={styles.suggestionText}>
+                  <ThemedText style={[styles.suggestionName, { color: colors.text }]}>
+                    {item.name}
+                  </ThemedText>
+                  <ThemedText style={[styles.suggestionAddress, { color: colors.text + '70' }]}>
+                    {item.address}
+                  </ThemedText>
+                </View>
+                {item.type === 'popular_spot' && (
+                  <View style={[styles.popularBadge, { backgroundColor: colors.primary + '20' }]}>
+                    <ThemedText style={[styles.popularBadgeText, { color: colors.primary }]}>
+                      Popular
+                    </ThemedText>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.suggestionsList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+        </ThemedView>
+      )}
 
       {/* Map View */}
       <View style={styles.mapContainer}>
@@ -247,36 +498,108 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           </ThemedText>
         </ThemedView>
       )}
-    </ThemedView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginVertical: 16,
+    flex: 1,
   },
   header: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32, // Compensate for back button width
+  },
+  headerSpacer: {
+    width: 32, // Same width as back button for centering
+  },
+  searchContainer: {
+    marginBottom: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 4,
   },
   instruction: {
     fontSize: 14,
     opacity: 0.7,
+    textAlign: 'center',
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 120, // Position below header
+    left: 16,
+    right: 16,
+    maxHeight: 200,
+    borderRadius: 12,
+    borderWidth: 1,
+    zIndex: 1000,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    gap: 12,
+  },
+  suggestionText: {
+    flex: 1,
+  },
+  suggestionName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  suggestionAddress: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  popularBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  popularBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   mapContainer: {
+    flex: 1,
     position: 'relative',
-    height: 300,
   },
   map: {
     flex: 1,

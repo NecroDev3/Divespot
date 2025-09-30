@@ -90,6 +90,23 @@ export default function ExploreScreen() {
         </ThemedText>
       </ThemedView>
 
+      {/* Preview Banner */}
+      <ThemedView style={[styles.previewBanner, { borderColor: colors.warning }]}>
+        <IconSymbol 
+          name="exclamationmark.triangle" 
+          size={20} 
+          color={colors.warning} 
+        />
+        <ThemedView style={styles.previewTextContainer}>
+          <ThemedText style={[styles.previewTitle, { color: colors.warning }]}>
+            Feature Preview
+          </ThemedText>
+          <ThemedText style={[styles.previewSubtitle, { color: colors.text }]}>
+            This explore feature is currently in development. Stay tuned for the full experience!
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+
       {/* Search Bar */}
       <ThemedView style={styles.searchContainer}>
         <TouchableOpacity style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -225,6 +242,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.7,
     textAlign: 'center',
+  },
+  previewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  previewTextContainer: {
+    flex: 1,
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  previewSubtitle: {
+    fontSize: 12,
+    opacity: 0.8,
+    lineHeight: 16,
   },
   searchContainer: {
     paddingHorizontal: 20,

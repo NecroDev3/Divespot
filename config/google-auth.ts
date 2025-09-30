@@ -18,8 +18,9 @@ export const GOOGLE_OAUTH_CONFIG = {
   // Web Client ID (used for web and as webClientId for mobile)
   webClientId: '147832202304-hedmlr681n9nm5qnsi8dmstqt81j8lv2.apps.googleusercontent.com',
   
-  // iOS Client ID (get this from Google Cloud Console - you'll need to create this)
-  iosClientId: '147832202304-hedmlr681n9nm5qnsi8dmstqt81j8lv2.apps.googleusercontent.com', // Using web client ID for now
+  // iOS Client ID (you need to create this in Google Cloud Console for iOS)
+  // For now using web client ID - you'll need to create a proper iOS client ID
+  iosClientId: '147832202304-41re98jvn5ltb30uhh1hvj5upu11180n.apps.googleusercontent.com', // TODO: Replace with iOS-specific client ID
   
   // Android Client ID (get this from Google Cloud Console - you'll need to create this)
   androidClientId: '147832202304-hedmlr681n9nm5qnsi8dmstqt81j8lv2.apps.googleusercontent.com', // Using web client ID for now

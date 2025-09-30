@@ -10,14 +10,25 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.linumlabs.divespot"
+      "bundleIdentifier": "com.divespot.necrodev3",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "google-oauth",
+            "CFBundleURLSchemes": [
+              "com.divespot.necrodev3"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.divespot.necrodev3"
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +47,12 @@
         }
       ],
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.147832202304-41re98jvn5ltb30uhh1hvj5upu11180n"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

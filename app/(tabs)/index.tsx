@@ -9,10 +9,11 @@ import { useUser } from '@/contexts/UserContext';
 import { DivePost, User, DiveSpot } from '@/types';
 import { divePostsService } from '@/services/divePostsService';
 import { shareService } from '@/services/shareService';
+import { imageService } from '@/services/imageService';
 import { Image } from 'expo-image';
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Dimensions, ScrollView, StyleSheet, Platform, ActivityIndicator, Alert, Modal, View, TextInput, TouchableOpacity, KeyboardAvoidingView, FlatList } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Platform, ActivityIndicator, Alert, Modal, View, TextInput, TouchableOpacity, KeyboardAvoidingView, FlatList, RefreshControl } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -55,7 +56,7 @@ const transformApiPost = (apiPost: any): DivePost => {
       createdBy: apiPost.dive_spot.created_by,
       createdAt: new Date(apiPost.dive_spot.created_at || new Date()),
     },
-    imageUris: apiPost.image_urls || [],
+    imageUris: (apiPost.image_urls || []).map((url: string) => imageService.getImageUrl(url)),
     caption: apiPost.caption,
     diveDetails: {
       date: new Date(apiPost.dive_date),
@@ -306,6 +307,7 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<DivePost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Comment modal state
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -351,6 +353,17 @@ export default function FeedScreen() {
       setPosts(mockPosts);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadFeedData();
+    } catch (error) {
+      console.error('Failed to refresh feed:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -511,6 +524,15 @@ export default function FeedScreen() {
       style={[styles.container, { backgroundColor: colors.background }]} 
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['transparent']}
+          tintColor="transparent"
+          progressBackgroundColor="transparent"
+        />
+      }
     >
       <ThemedView style={[styles.header, { borderBottomColor: colors.border }]}>
         <Image 

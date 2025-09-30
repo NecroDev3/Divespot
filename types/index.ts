@@ -153,15 +153,3 @@ export const CAPE_TOWN_DIVE_SPOTS: Omit<DiveSpot, 'id' | 'createdBy' | 'createdA
   }
 ];
 
-// UI and Navigation types
-export interface RootTabParamList {
-  Feed: undefined;
-  AddPost: undefined;
-  Profile: undefined;
-  Explore: undefined;
-}
-
-export interface NavigationProps {
-  navigation: any; // Will be properly typed when navigation is set up
-  route: any;
-}

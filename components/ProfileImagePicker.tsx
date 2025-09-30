@@ -1,7 +1,6 @@
 import React from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
 
 interface ProfileImagePickerProps {
   onImageSelected: (uri: string) => void;

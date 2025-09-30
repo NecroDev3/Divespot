@@ -174,13 +174,15 @@ export const CompactDiveCard: React.FC<CompactDiveCardProps> = ({
             )}
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: 'transparent' }]} 
-            onPress={onShare}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="square.and.arrow.up" size={24} color={colors.share} />
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: 'transparent' }]} 
+              onPress={onShare}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="square.and.arrow.up" size={24} color={colors.share} />
+            </TouchableOpacity>
+          )}
         </ThemedView>
       </ThemedView>
     </TouchableOpacity>

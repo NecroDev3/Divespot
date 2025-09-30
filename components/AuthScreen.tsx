@@ -240,7 +240,7 @@ export default function AuthScreen({ onLogin, onSignUp, onGoogleAuth }: AuthScre
             disabled={isLoading}
           >
             <IconSymbol 
-              name="logo.google" 
+              name="globe" 
               size={20} 
               color={colors.text}
             />
