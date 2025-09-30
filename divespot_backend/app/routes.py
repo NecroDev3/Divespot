@@ -4,6 +4,7 @@ from datetime import datetime, date
 from .db import db
 from .models import User, DiveSpot, DivePost, PostLike, PostComment, recalc_post_counts
 from .utils import parse_date, parse_datetime, paginated_query
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import re
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 

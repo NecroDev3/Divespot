@@ -1,4 +1,6 @@
 from flask import Flask
+from flask_jwt_extended import JWTManager
+
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -12,6 +14,7 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dive_spot.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
+    app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this in your production app!
 
     # Enable CORS for all routes - completely open for development
     CORS(app, origins="*", supports_credentials=True)
@@ -22,6 +25,7 @@ def create_app():
 
     # Setup the Flask-JWT-Extended extension
     jwt = JWTManager(app)
+
 
     # Ensure tables are created
     with app.app_context():
