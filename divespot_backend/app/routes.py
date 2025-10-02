@@ -176,8 +176,9 @@ def create_user():
         db.session.add(user)
         db.session.commit()
         return model_to_dict_user(user), 201
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
+        print(f"Error: {e}")
         return {"error": "username or email already exists"}, 400
 
 @api_bp.route("/users", methods=["GET"])
