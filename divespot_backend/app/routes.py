@@ -173,15 +173,28 @@ def login_user():
     if not user:
         return {"error": "Invalid email or password"}, 401
     
-    # For MVP, we'll do simple password check (in production, use proper password hashing)
-    if user.password_hash != password:
+    # Use proper password hashing verification
+    if not user.check_password(password):
         return {"error": "Invalid email or password"}, 401
+    
+    # Generate JWT tokens
+    access_token = create_access_token(identity=user.id)
+    refresh_token = create_refresh_token(identity=user.id)
+    
+    # Calculate expiration time (in milliseconds for frontend)
+    access_expires_at = int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000)
     
     # Update last active time
     user.last_active_at = datetime.utcnow()
     db.session.commit()
     
-    return model_to_dict_user(user), 200
+    # Return both tokens and user data
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_at": access_expires_at,
+        "user": model_to_dict_user(user)
+    }, 200
 
 # ----------- Users -----------
 
@@ -203,7 +216,19 @@ def create_user():
         user.set_password(data["password"])
         db.session.add(user)
         db.session.commit()
-        return model_to_dict_user(user), 201
+        
+        # Generate JWT tokens for auto-login after signup
+        access_token = create_access_token(identity=user.id)
+        refresh_token = create_refresh_token(identity=user.id)
+        access_expires_at = int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000)
+        
+        # Return tokens and user data
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_at": access_expires_at,
+            "user": model_to_dict_user(user)
+        }, 201
     except IntegrityError:
         db.session.rollback()
         return {"error": "username or email already exists"}, 400
