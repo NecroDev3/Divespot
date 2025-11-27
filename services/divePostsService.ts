@@ -1,6 +1,7 @@
 import { authService } from './authService';
 import { Platform } from 'react-native';
 import { API_CONFIG } from '@/constants/Api';
+import { apiClient } from './apiClient';
 
 export interface CreateDivePostData {
   // Required fields
@@ -48,69 +49,23 @@ export interface DivePostResponse {
   updated_at?: string;
 }
 
-// Get the appropriate base URL based on platform
-const getBaseUrl = (): string => {
-  // Use centralized API configuration
-  return API_CONFIG.BASE_URL;
-};
-
 class DivePostsService {
-  private baseUrl: string;
-
   constructor() {
-    // Use platform-specific base URL: localhost for web, network IP for mobile
-    this.baseUrl = getBaseUrl();
-  }
-
-  // Basic HTTP request helper (reused from authService pattern)
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const defaultHeaders = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return responseData;
-    } catch (error: any) {
-      console.error('API Request failed:', error);
-      throw new Error(error.message || 'Network request failed');
-    }
+    // No need for baseUrl since we're using apiClient
   }
 
   // Create a new dive post
   async createDivePost(postData: CreateDivePostData): Promise<DivePostResponse> {
     try {
       // Check if backend is available
-      const backendAvailable = await authService.checkHealth();
+      const backendAvailable = await apiClient.healthCheck();
       
       if (backendAvailable) {
         console.log('Creating dive post via API...');
-        const response = await this.makeRequest<DivePostResponse>('/posts', {
-          method: 'POST',
-          body: JSON.stringify(postData),
-        });
+        const response = await apiClient.post('/posts', postData);
         
-        console.log('✅ Dive post created successfully:', response.id);
-        return response;
+        console.log('✅ Dive post created successfully:', response.data.id);
+        return response.data;
       } else {
         // Backend unavailable - for now, just throw error
         // In future, could save locally and sync later
@@ -125,12 +80,11 @@ class DivePostsService {
   // Get user's dive posts
   async getUserPosts(userId: string, limit?: number, offset?: number): Promise<DivePostResponse[]> {
     try {
-      const params = new URLSearchParams();
-      params.append('user_id', userId);
-      if (limit) params.append('limit', limit.toString());
-      if (offset) params.append('offset', offset.toString());
+      const params: Record<string, any> = { user_id: userId };
+      if (limit) params.limit = limit;
+      if (offset) params.offset = offset;
 
-      const response = await this.makeRequest<{ data: DivePostResponse[] }>(`/posts?${params}`);
+      const response = await apiClient.get('/posts', params);
       return response.data || [];
     } catch (error: any) {
       console.error('Failed to get user posts:', error);
@@ -141,11 +95,11 @@ class DivePostsService {
   // Get all posts (feed)
   async getFeedPosts(limit?: number, offset?: number): Promise<DivePostResponse[]> {
     try {
-      const params = new URLSearchParams();
-      if (limit) params.append('limit', limit.toString());
-      if (offset) params.append('offset', offset.toString());
+      const params: Record<string, any> = {};
+      if (limit) params.limit = limit;
+      if (offset) params.offset = offset;
 
-      const response = await this.makeRequest<{ data: DivePostResponse[] }>(`/feed?${params}`);
+      const response = await apiClient.get('/feed', params);
       return response.data || [];
     } catch (error: any) {
       console.error('Failed to get feed posts:', error);
@@ -157,9 +111,7 @@ class DivePostsService {
   async getFeed(limit: number = 20): Promise<{data: any[], meta: any}> {
     try {
       console.log('🌊 Fetching feed data...');
-      const response = await this.makeRequest<{data: any[], meta: any}>(`/feed?limit=${limit}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get('/feed', { limit });
       
       console.log('✅ Feed data fetched:', response.data.length, 'posts');
       return response;
@@ -172,10 +124,7 @@ class DivePostsService {
   // Like a post
   async likePost(postId: string, userId: string): Promise<void> {
     try {
-      await this.makeRequest(`/posts/${postId}/like`, {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId }),
-      });
+      await apiClient.post(`/posts/${postId}/like`, { user_id: userId });
     } catch (error: any) {
       console.error('Failed to like post:', error);
       throw error;
@@ -185,10 +134,7 @@ class DivePostsService {
   // Unlike a post
   async unlikePost(postId: string, userId: string): Promise<void> {
     try {
-      await this.makeRequest(`/posts/${postId}/unlike`, {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId }),
-      });
+      await apiClient.post(`/posts/${postId}/unlike`, { user_id: userId });
     } catch (error: any) {
       console.error('Failed to unlike post:', error);
       throw error;
@@ -199,9 +145,7 @@ class DivePostsService {
   async getComments(postId: string, limit: number = 50): Promise<{data: any[], meta: any}> {
     try {
       console.log(`💬 Fetching comments for post ${postId}...`);
-      const response = await this.makeRequest<{data: any[], meta: any}>(`/posts/${postId}/comments?limit=${limit}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(`/posts/${postId}/comments`, { limit });
 
       console.log('✅ Comments fetched:', response.data.length, 'comments');
       return response;
@@ -215,13 +159,10 @@ class DivePostsService {
   async createComment(postId: string, userId: string, content: string): Promise<any> {
     try {
       console.log(`💬 Creating comment on post ${postId}...`);
-      const response = await this.makeRequest(`/posts/${postId}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId, content: content }),
-      });
+      const response = await apiClient.post(`/posts/${postId}/comments`, { user_id: userId, content });
 
       console.log('✅ Comment created successfully');
-      return response;
+      return response.data;
     } catch (error: any) {
       console.error('Failed to create comment:', error);
       throw error;
@@ -232,13 +173,10 @@ class DivePostsService {
   async updateComment(commentId: string, content: string): Promise<any> {
     try {
       console.log(`💬 Updating comment ${commentId}...`);
-      const response = await this.makeRequest(`/comments/${commentId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ content: content }),
-      });
+      const response = await apiClient.put(`/comments/${commentId}`, { content });
 
       console.log('✅ Comment updated successfully');
-      return response;
+      return response.data;
     } catch (error: any) {
       console.error('Failed to update comment:', error);
       throw error;
@@ -249,9 +187,7 @@ class DivePostsService {
   async deleteComment(commentId: string): Promise<void> {
     try {
       console.log(`💬 Deleting comment ${commentId}...`);
-      await this.makeRequest(`/comments/${commentId}`, {
-        method: 'DELETE',
-      });
+      await apiClient.delete(`/comments/${commentId}`);
 
       console.log('✅ Comment deleted successfully');
     } catch (error: any) {
@@ -277,13 +213,10 @@ class DivePostsService {
         created_by: userId || 'system', // Use authenticated user or system as fallback
       };
 
-      const response = await this.makeRequest<{id: string}>('/spots', {
-        method: 'POST',
-        body: JSON.stringify(spotData),
-      });
+      const response = await apiClient.post('/spots', spotData);
 
-      console.log('✅ Dive spot created:', response.id);
-      return response.id;
+      console.log('✅ Dive spot created:', response.data.id);
+      return response.data.id;
     } catch (error: any) {
       console.error('Failed to create dive spot:', error);
       throw new Error('Failed to create dive spot: ' + error.message);

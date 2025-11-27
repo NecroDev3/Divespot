@@ -1,9 +1,7 @@
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '@/constants/Api';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import { googleSignIn, GoogleUser } from './googleAuthService';
+import { apiClient } from './apiClient';
+import { tokenService } from './tokenService';
 
 // Simple types for auth
 export interface AuthUser {
@@ -34,55 +32,17 @@ export interface LoginData {
   password: string;
 }
 
-// Get the appropriate base URL based on platform
-const getBaseUrl = (): string => {
-  // Use centralized API configuration
-  return API_CONFIG.BASE_URL;
-};
-
 class AuthService {
-  private baseUrl: string;
-  
   constructor() {
-    // Use port 5001 to avoid conflict with AirTunes on port 5000
-    // Platform-specific URL: localhost for web, network IP for mobile
-    this.baseUrl = getBaseUrl();
+    // Note: Unauthorized callback is set up in UserContext to access React state
   }
 
-  // Basic HTTP request helper
-  private async makeRequest<T>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`);
-      }
-
-      return data;
-    } catch (error: any) {
-      console.error('API Request failed:', error);
-      throw new Error(error.message || 'Network request failed');
-    }
-  }
 
   // Signup - create new user
   async signup(signupData: SignupData): Promise<AuthUser> {
     try {
       // First, check if backend is available
-      const backendAvailable = await this.checkHealth();
+      const backendAvailable = await apiClient.healthCheck();
       
       if (backendAvailable) {
         const requestData = {
@@ -95,10 +55,8 @@ class AuthService {
           email_verified: false,
         };
 
-        const user = await this.makeRequest<AuthUser>('/users', {
-          method: 'POST',
-          body: JSON.stringify(requestData),
-        });
+        const response = await apiClient.post('/users', requestData);
+        const user = response.data as AuthUser;
 
         // Save user to local storage
         await this.saveUser(user);
@@ -139,21 +97,54 @@ class AuthService {
   async login(loginData: LoginData): Promise<AuthUser> {
     try {
       // First, check if backend is available
-      const backendAvailable = await this.checkHealth();
+      const backendAvailable = await apiClient.healthCheck();
       
       if (backendAvailable) {
-        // Try backend authentication
-        const user = await this.makeRequest<AuthUser>('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({
-            email: loginData.email,
-            password: loginData.password,
-          }),
+        console.log('🔐 Attempting login with backend...');
+        
+        // Try backend authentication - this should return JWT token
+        const response = await apiClient.post('/auth/login', {
+          email: loginData.email,
+          password: loginData.password,
         });
 
-        // Save user to local storage
-        await this.saveUser(user);
-        return user;
+        // Check if response contains JWT token
+        if (response.data.access_token) {
+          console.log('✅ Login successful - JWT token received');
+          
+          // Store JWT token
+          await tokenService.storeToken({
+            access_token: response.data.access_token,
+            expires_at: response.data.expires_at,
+            refresh_token: response.data.refresh_token,
+          });
+
+          // Get user data (response might include user data or we need to fetch it)
+          let user: AuthUser;
+          if (response.data.user) {
+            user = response.data.user;
+          } else {
+            // If user data not included, we need to fetch it using the token
+            // For now, extract user ID from token and fetch user data
+            const userId = await tokenService.getUserIdFromToken();
+            if (userId) {
+              const userResponse = await apiClient.get(`/users/${userId}`);
+              user = userResponse.data;
+            } else {
+              throw new Error('Unable to get user information from token');
+            }
+          }
+
+          // Save user to local storage
+          await this.saveUser(user);
+          return user;
+        } else {
+          // Legacy response format without JWT (fallback)
+          console.log('⚠️ Login response without JWT token - using legacy format');
+          const user = response.data as AuthUser;
+          await this.saveUser(user);
+          return user;
+        }
       } else {
         // Backend unavailable - check local storage
         const existingUser = await this.getCurrentUser();
@@ -190,7 +181,7 @@ class AuthService {
       // Try to authenticate with backend first
       try {
         // Check if backend is available
-        await this.checkHealth();
+        await apiClient.healthCheck();
         
         // Try to get existing user or create new one via backend
         const backendUser = await this.getOrCreateGoogleUser(googleUser);
@@ -229,28 +220,29 @@ class AuthService {
   // Helper method to get or create user via backend
   private async getOrCreateGoogleUser(googleUser: GoogleUser): Promise<AuthUser> {
     try {
-      // Try to get existing user by email
-      const response = await fetch(`${this.baseUrl}/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          google_id: googleUser.id,
-          email: googleUser.email,
-          display_name: googleUser.name,
-          profile_image_url: googleUser.photo,
-          given_name: googleUser.givenName,
-          family_name: googleUser.familyName,
-        }),
+      // Try to get existing user by email or create new one
+      const response = await apiClient.post('/auth/google', {
+        google_id: googleUser.id,
+        email: googleUser.email,
+        display_name: googleUser.name,
+        profile_image_url: googleUser.photo,
+        given_name: googleUser.givenName,
+        family_name: googleUser.familyName,
       });
 
-      if (!response.ok) {
-        throw new Error(`Backend auth failed: ${response.status}`);
+      // Handle JWT token if present
+      if (response.data.access_token) {
+        console.log('✅ Google auth successful - JWT token received');
+        
+        // Store JWT token
+        await tokenService.storeToken({
+          access_token: response.data.access_token,
+          expires_at: response.data.expires_at,
+          refresh_token: response.data.refresh_token,
+        });
       }
 
-      const data = await response.json();
-      return data.user;
+      return response.data.user || response.data;
       
     } catch (error) {
       console.error('Backend Google auth failed:', error);
@@ -278,33 +270,14 @@ class AuthService {
     }
   }
 
-  // Logout - clear user data
+  // Logout - clear user data and JWT tokens
   async logout(): Promise<void> {
     try {
+      console.log('🔐 Logging out - clearing tokens and user data');
+      await tokenService.clearToken();
       await AsyncStorage.removeItem('current_user');
     } catch (error) {
       console.error('Failed to logout:', error);
-    }
-  }
-
-  // Check if backend is available
-  async checkHealth(): Promise<boolean> {
-    try {
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      const response = await fetch(`${this.baseUrl.replace('/api', '')}/`, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      return response.ok && data.ok === true;
-    } catch (error) {
-      console.log('Backend health check failed:', error);
-      return false;
     }
   }
 }

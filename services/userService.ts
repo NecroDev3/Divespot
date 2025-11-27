@@ -1,12 +1,6 @@
 import { Platform } from 'react-native';
 import { DivePost } from '@/types';
-import { API_CONFIG } from '@/constants/Api';
-
-// Get the appropriate base URL based on platform
-const getBaseUrl = (): string => {
-  // Use centralized API configuration
-  return API_CONFIG.BASE_URL;
-};
+import { apiClient } from './apiClient';
 
 export interface UpdateProfileData {
   username?: string;
@@ -21,57 +15,18 @@ export interface UpdateProfileData {
 }
 
 class UserService {
-  private baseUrl: string;
-
   constructor() {
-    this.baseUrl = getBaseUrl();
-  }
-
-  // Basic HTTP request helper
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const defaultHeaders = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return responseData;
-    } catch (error: any) {
-      console.error('API Request failed:', error);
-      throw new Error(error.message || 'Network request failed');
-    }
+    // No need for baseUrl since we're using apiClient
   }
 
   // Update user profile
   async updateProfile(userId: string, profileData: UpdateProfileData): Promise<any> {
     try {
       console.log('📝 Updating user profile...');
-      const response = await this.makeRequest(`/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify(profileData),
-      });
+      const response = await apiClient.put(`/users/${userId}`, profileData);
 
       console.log('✅ Profile updated successfully');
-      return response;
+      return response.data;
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       throw error;
@@ -82,12 +37,10 @@ class UserService {
   async getUser(userId: string): Promise<any> {
     try {
       console.log(`👤 Fetching user ${userId}...`);
-      const response = await this.makeRequest(`/users/${userId}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(`/users/${userId}`);
 
       console.log('✅ User data fetched successfully');
-      return response;
+      return response.data;
     } catch (error: any) {
       console.error('Failed to get user:', error);
       throw error;
@@ -98,9 +51,7 @@ class UserService {
   async getUserPosts(userId: string, limit: number = 20): Promise<{data: any[], meta: any}> {
     try {
       console.log(`📸 Fetching posts for user ${userId}...`);
-      const response = await this.makeRequest<{data: any[], meta: any}>(`/posts?user_id=${userId}&limit=${limit}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(`/posts`, { user_id: userId, limit });
 
       console.log('✅ User posts fetched:', response.data.length, 'posts');
       return response;
@@ -135,9 +86,7 @@ class UserService {
   async getAllUsers(limit: number = 50): Promise<{data: any[], meta: any}> {
     try {
       console.log('👥 Fetching all users...');
-      const response = await this.makeRequest<{data: any[], meta: any}>(`/users?limit=${limit}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(`/users`, { limit });
 
       console.log('✅ Users fetched:', response.data.length, 'users');
       return response;

@@ -9,23 +9,23 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		A75E471DA6590DA18B698CF9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 61E85A581AD142A3F1E2684D /* PrivacyInfo.xcprivacy */; };
+		6F1DC34BED872757122981D6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0C7D5E89AAEC0BBF63C4CF0F /* PrivacyInfo.xcprivacy */; };
+		9B2DE05842189DD7557C9EAA /* libPods-DiveSpot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B2424AA0E5CCC193501E8F3 /* libPods-DiveSpot.a */; };
+		9C62B8DC612C3E85819CF8DF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F012BCF79034A4B981E92A2 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D9A0C34BD4C93655B8076529 /* libPods-DiveSpot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A3548E5DFC9CEA94CB6B7EFF /* libPods-DiveSpot.a */; };
-		DED6956F388A4B3CAF3A858A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FB8B65728161D5850BE89B /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0C7D5E89AAEC0BBF63C4CF0F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = DiveSpot/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0F012BCF79034A4B981E92A2 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-DiveSpot/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DiveSpot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiveSpot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DiveSpot/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DiveSpot/Info.plist; sourceTree = "<group>"; };
-		2D0E03E9641FCA1992425A55 /* Pods-DiveSpot.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DiveSpot.release.xcconfig"; path = "Target Support Files/Pods-DiveSpot/Pods-DiveSpot.release.xcconfig"; sourceTree = "<group>"; };
-		44FB8B65728161D5850BE89B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-DiveSpot/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		61E85A581AD142A3F1E2684D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = DiveSpot/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		83006534B33236EF07579136 /* Pods-DiveSpot.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DiveSpot.debug.xcconfig"; path = "Target Support Files/Pods-DiveSpot/Pods-DiveSpot.debug.xcconfig"; sourceTree = "<group>"; };
-		A3548E5DFC9CEA94CB6B7EFF /* libPods-DiveSpot.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-DiveSpot.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		859A102B937B12F58F5BBEED /* Pods-DiveSpot.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DiveSpot.release.xcconfig"; path = "Target Support Files/Pods-DiveSpot/Pods-DiveSpot.release.xcconfig"; sourceTree = "<group>"; };
+		9B2424AA0E5CCC193501E8F3 /* libPods-DiveSpot.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-DiveSpot.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = DiveSpot/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B3E946066AE2794AC0302604 /* Pods-DiveSpot.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DiveSpot.debug.xcconfig"; path = "Target Support Files/Pods-DiveSpot/Pods-DiveSpot.debug.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = DiveSpot/AppDelegate.swift; sourceTree = "<group>"; };
@@ -37,13 +37,23 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D9A0C34BD4C93655B8076529 /* libPods-DiveSpot.a in Frameworks */,
+				9B2DE05842189DD7557C9EAA /* libPods-DiveSpot.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		105BFF17F9564D12BE90FCEF /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				B3E946066AE2794AC0302604 /* Pods-DiveSpot.debug.xcconfig */,
+				859A102B937B12F58F5BBEED /* Pods-DiveSpot.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* DiveSpot */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,15 +63,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				61E85A581AD142A3F1E2684D /* PrivacyInfo.xcprivacy */,
-			);
-			name = DiveSpot;
-			sourceTree = "<group>";
-		};
-		14A054977C67D863CF248378 /* DiveSpot */ = {
-			isa = PBXGroup;
-			children = (
-				44FB8B65728161D5850BE89B /* ExpoModulesProvider.swift */,
+				0C7D5E89AAEC0BBF63C4CF0F /* PrivacyInfo.xcprivacy */,
 			);
 			name = DiveSpot;
 			sourceTree = "<group>";
@@ -70,15 +72,15 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				A3548E5DFC9CEA94CB6B7EFF /* libPods-DiveSpot.a */,
+				9B2424AA0E5CCC193501E8F3 /* libPods-DiveSpot.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		2D9D069B7DA82B31DBBBB29A /* ExpoModulesProviders */ = {
+		700D1CB49586FCF68F066591 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				14A054977C67D863CF248378 /* DiveSpot */,
+				E980009697D1C7A272D23365 /* DiveSpot */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -97,8 +99,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				CFD23EE871D6C0F976064953 /* Pods */,
-				2D9D069B7DA82B31DBBBB29A /* ExpoModulesProviders */,
+				105BFF17F9564D12BE90FCEF /* Pods */,
+				700D1CB49586FCF68F066591 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -122,14 +124,12 @@
 			path = DiveSpot/Supporting;
 			sourceTree = "<group>";
 		};
-		CFD23EE871D6C0F976064953 /* Pods */ = {
+		E980009697D1C7A272D23365 /* DiveSpot */ = {
 			isa = PBXGroup;
 			children = (
-				83006534B33236EF07579136 /* Pods-DiveSpot.debug.xcconfig */,
-				2D0E03E9641FCA1992425A55 /* Pods-DiveSpot.release.xcconfig */,
+				0F012BCF79034A4B981E92A2 /* ExpoModulesProvider.swift */,
 			);
-			name = Pods;
-			path = Pods;
+			name = DiveSpot;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "DiveSpot" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				A38B78DB6381C6A929E6DA6F /* [Expo] Configure project */,
+				B9CCDFDC030E40F64E905764 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				46D78526FAF6CAC48BBDA123 /* [CP] Embed Pods Frameworks */,
+				281D1CD8FCD618239C19105C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				A75E471DA6590DA18B698CF9 /* PrivacyInfo.xcprivacy in Resources */,
+				6F1DC34BED872757122981D6 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +242,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		46D78526FAF6CAC48BBDA123 /* [CP] Embed Pods Frameworks */ = {
+		281D1CD8FCD618239C19105C /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -356,7 +356,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DiveSpot/Pods-DiveSpot-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A38B78DB6381C6A929E6DA6F /* [Expo] Configure project */ = {
+		B9CCDFDC030E40F64E905764 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -388,7 +388,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				DED6956F388A4B3CAF3A858A /* ExpoModulesProvider.swift in Sources */,
+				9C62B8DC612C3E85819CF8DF /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,7 +397,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 83006534B33236EF07579136 /* Pods-DiveSpot.debug.xcconfig */;
+			baseConfigurationReference = B3E946066AE2794AC0302604 /* Pods-DiveSpot.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -433,7 +433,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2D0E03E9641FCA1992425A55 /* Pods-DiveSpot.release.xcconfig */;
+			baseConfigurationReference = 859A102B937B12F58F5BBEED /* Pods-DiveSpot.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

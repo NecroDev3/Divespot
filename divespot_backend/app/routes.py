@@ -1,12 +1,16 @@
 from flask import Blueprint, request, jsonify, abort
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from .db import db
 from .models import User, DiveSpot, DivePost, PostLike, PostComment, recalc_post_counts
 from .utils import parse_date, parse_datetime, paginated_query
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token, 
+    create_refresh_token,
+    jwt_required, 
+    get_jwt_identity
+)
 import re
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 api_bp = Blueprint("api", __name__)
 
@@ -22,9 +26,33 @@ def login():
 
     if user and user.check_password(password):
         access_token = create_access_token(identity=user.id)
-        return jsonify(access_token=access_token)
+        refresh_token = create_refresh_token(identity=user.id)
+        
+        # Calculate expiration times (in milliseconds for frontend)
+        access_expires_at = int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000)
+        
+        return jsonify(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_at=access_expires_at
+        )
 
     return jsonify({"msg": "Bad username or password"}), 401
+
+@api_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    """Refresh access token using refresh token"""
+    identity = get_jwt_identity()
+    access_token = create_access_token(identity=identity)
+    
+    # Calculate new expiration time
+    access_expires_at = int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000)
+    
+    return jsonify(
+        access_token=access_token,
+        expires_at=access_expires_at
+    )
 
 # ----------- helpers -----------
 

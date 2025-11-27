@@ -1,8 +1,8 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
-
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from datetime import timedelta
+import os
 
 from .db import db, init_sqlite_pragma
 from .routes import api_bp
@@ -10,15 +10,37 @@ from .routes import api_bp
 
 def create_app():
     app = Flask(__name__)
-    # SQLite URL — file db in project root
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///dive_spot.db"
+    
+    # Load environment variables
+    flask_env = os.getenv('FLASK_ENV', 'development')
+    
+    # Database Configuration
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+        'DATABASE_URI', 
+        'sqlite:///dive_spot.db'
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
-    app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this in your production app!
+    
+    # JWT Configuration - Use environment variable or fallback to default
+    jwt_secret = os.getenv('JWT_SECRET_KEY')
+    if not jwt_secret:
+        if flask_env == 'production':
+            raise ValueError("JWT_SECRET_KEY must be set in production!")
+        jwt_secret = "dev-secret-key-change-in-production"
+        print("⚠️  WARNING: Using default JWT secret key. Set JWT_SECRET_KEY environment variable!")
+    
+    app.config["JWT_SECRET_KEY"] = jwt_secret
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
+        hours=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES_HOURS', 1))
+    )
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(
+        days=int(os.getenv('JWT_REFRESH_TOKEN_EXPIRES_DAYS', 30))
+    )
 
-    # Enable CORS for all routes - completely open for development
-    CORS(app, origins="*", supports_credentials=True)
-    app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this in your production app!
+    # CORS Configuration
+    cors_origins = os.getenv('CORS_ORIGINS', '*')
+    CORS(app, origins=cors_origins, supports_credentials=True)
 
     db.init_app(app)
     init_sqlite_pragma(app)

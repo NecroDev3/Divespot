@@ -3,11 +3,13 @@
     "name": "DiveSpot",
     "slug": "DiveSpot",
     "version": "1.0.0",
+    "description": "Discover, document, and share your diving adventures. Connect with divers worldwide, find the best dive spots, and log your underwater experiences.",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/DSLogo.png",
     "scheme": "divespot",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "primaryColor": "#003366",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.divespot.necrodev3",
@@ -24,8 +26,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/DSLogo.png",
+        "backgroundColor": "#003366"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.divespot.necrodev3"
@@ -33,17 +35,17 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/DSLogo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/DSLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#003366"
         }
       ],
       "expo-web-browser",

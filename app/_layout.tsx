@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { Colors } from '@/constants/Colors';
 import AuthScreen from '@/components/AuthScreen';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Web-specific imports can go here if needed
 
@@ -60,12 +61,14 @@ export default function RootLayout() {
   }
 
   return (
-    <UserProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootLayoutInner />
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </UserProvider>
+    <ErrorBoundary>
+      <UserProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootLayoutInner />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </UserProvider>
+    </ErrorBoundary>
   );
 }
 

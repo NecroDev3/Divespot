@@ -5,6 +5,8 @@ import { userService, UpdateProfileData } from '@/services/userService';
 import { divePostsService } from '@/services/divePostsService';
 import { imageService } from '@/services/imageService';
 import { Alert } from 'react-native';
+import { apiClient } from '@/services/apiClient';
+import { tokenService } from '@/services/tokenService';
 
 // Helper function to transform AuthUser to User
 const transformAuthUser = (authUser: AuthUser): User => {
@@ -68,6 +70,19 @@ export function UserProvider({ children }: UserProviderProps) {
     const initializeApp = async () => {
       try {
         setIsLoading(true);
+        
+        // Set up automatic logout handler for 401 errors
+        apiClient.setUnauthorizedCallback(async () => {
+          console.log('🔒 Unauthorized access detected - logging out user');
+          await tokenService.clearToken();
+          setUserState(null);
+          setUserPosts([]);
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please log in again.',
+            [{ text: 'OK' }]
+          );
+        });
         
         const authUser = await authService.getCurrentUser();
         if (authUser) {
