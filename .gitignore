@@ -143,3 +143,19 @@ vite.config.ts.timestamp-*
 
 expo-env.d.ts
 # @end expo-cli
+# Python Backend
+divespot_backend/.venv/
+divespot_backend/__pycache__/
+divespot_backend/**/__pycache__/
+divespot_backend/**/*.pyc
+divespot_backend/instance/*.db
+divespot_backend/instance/*.db-journal
+
+# Image Service
+divespot_backend_image_service/.venv/
+divespot_backend_image_service/uploads/*.jpg
+divespot_backend_image_service/uploads/*.png
+divespot_backend_image_service/uploads/*.jpeg
+divespot_backend_image_service/uploads/*.gif
+!divespot_backend_image_service/uploads/.gitkeep
+
